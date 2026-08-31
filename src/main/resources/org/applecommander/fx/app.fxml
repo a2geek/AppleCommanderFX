@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Menu?>
+<?import javafx.scene.control.MenuBar?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.layout.BorderPane?>
+
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="org.applecommander.fx.AppController">
+    <top>
+        <MenuBar>
+            <menus>
+                <Menu text="File">
+                    <items>
+                        <MenuItem text="Open..." onAction="#openDisk" />
+                        <MenuItem text="Close" onAction="#closeDisk" />
+                        <MenuItem text="Exit" onAction="#exitApplication" />
+                    </items>
+                </Menu>
+            </menus>
+        </MenuBar>
+    </top>
+
+    <center>
+        <TableView fx:id="fileTable" prefWidth="1100" prefHeight="600">
+            <placeholder>
+                <Label text="No disk image open. Use File &gt; Open to browse a disk image." />
+            </placeholder>
+            <columns>
+                <TableColumn fx:id="nameColumn" text="Name" prefWidth="360" />
+                <TableColumn fx:id="typeColumn" text="Type" prefWidth="140" />
+                <TableColumn fx:id="sizeColumn" text="Size" prefWidth="120" />
+                <TableColumn fx:id="statusColumn" text="Status" prefWidth="110" />
+            </columns>
+        </TableView>
+    </center>
+
+    <bottom>
+        <Label fx:id="statusLabel" text="No disk image opened." />
+    </bottom>
+</BorderPane>
