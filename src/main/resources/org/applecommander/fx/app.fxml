@@ -7,6 +7,7 @@
             xmlns:fx="http://javafx.com/fxml"
             fx:controller="org.applecommander.fx.AppController">
     <fx:define>
+        <ToggleGroup fx:id="contentModeGroup" />
         <ToggleGroup fx:id="viewModeGroup" />
     </fx:define>
 
@@ -47,6 +48,35 @@
                                 </VBox>
                             </graphic>
                         </Button>
+                        <Separator orientation="VERTICAL" />
+                        <HBox spacing="0">
+                            <children>
+                                <ToggleButton fx:id="filesContentButton" toggleGroup="$contentModeGroup" selected="true" onAction="#selectFilesContent" disable="true" style="-fx-padding: 4 8 4 8; -fx-background-radius: 0; -fx-border-radius: 0; -fx-background-insets: 0;">
+                                    <graphic>
+                                        <VBox alignment="CENTER" spacing="2">
+                                            <ImageView fitWidth="24" fitHeight="24" preserveRatio="true">
+                                                <image>
+                                                    <Image url="@/org/applecommander/images/tree-view.png" />
+                                                </image>
+                                            </ImageView>
+                                            <Label text="Files" />
+                                        </VBox>
+                                    </graphic>
+                                </ToggleButton>
+                                <ToggleButton fx:id="diskUsageContentButton" toggleGroup="$contentModeGroup" onAction="#selectDiskUsageContent" disable="true" style="-fx-padding: 4 8 4 8; -fx-background-radius: 0; -fx-border-radius: 0; -fx-background-insets: 0;">
+                                    <graphic>
+                                        <VBox alignment="CENTER" spacing="2">
+                                            <ImageView fitWidth="24" fitHeight="24" preserveRatio="true">
+                                                <image>
+                                                    <Image url="@/org/applecommander/images/disk-usage-view.png" />
+                                                </image>
+                                            </ImageView>
+                                            <Label text="Disk Usage" />
+                                        </VBox>
+                                    </graphic>
+                                </ToggleButton>
+                            </children>
+                        </HBox>
                         <Separator orientation="VERTICAL" />
                         <HBox spacing="0">
                             <children>

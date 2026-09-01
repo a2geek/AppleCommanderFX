@@ -21,8 +21,13 @@ public class AppController {
     private static final String PREF_NODE = "/org/applecommander/fx";
     private static final String IMAGE_DIRECTORY_KEY = "image_directory";
 
+    private static final int CONTENT_FILES = 0;
+    private static final int CONTENT_DISK_USAGE = 1;
+
     @FXML private TableView<DiskFileRow> fileTable;
     @FXML private Label statusLabel;
+    @FXML private ToggleButton filesContentButton;
+    @FXML private ToggleButton diskUsageContentButton;
     @FXML private ToggleButton standardToolButton;
     @FXML private ToggleButton nativeToolButton;
     @FXML private ToggleButton detailToolButton;
@@ -32,13 +37,16 @@ public class AppController {
 
     private Stage primaryStage;
     private FormattedDisk currentDisk;
+    private int currentContentMode = CONTENT_FILES;
     private int currentDisplayMode = FormattedDisk.FILE_DISPLAY_STANDARD;
 
     @FXML
     private void initialize() {
         fileTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
         fileTable.setItems(FXCollections.emptyObservableList());
+        setContentControlsEnabled(false);
         setViewControlsEnabled(false);
+        applyContentMode(currentContentMode);
         applyViewMode(currentDisplayMode);
     }
 
@@ -77,9 +85,17 @@ public class AppController {
     @FXML
     private void closeDisk() {
         currentDisk = null;
+        currentContentMode = CONTENT_FILES;
         fileTable.setItems(FXCollections.emptyObservableList());
         fileTable.getColumns().clear();
+        setContentControlsEnabled(false);
         setViewControlsEnabled(false);
+        if (filesContentButton != null) {
+            filesContentButton.setSelected(true);
+        }
+        if (diskUsageContentButton != null) {
+            diskUsageContentButton.setSelected(false);
+        }
         statusLabel.setText("No disk image opened.");
         if (primaryStage != null) {
             primaryStage.setTitle("AppleCommanderFX");
@@ -89,6 +105,16 @@ public class AppController {
     @FXML
     private void exitApplication() {
         Platform.exit();
+    }
+
+    @FXML
+    private void selectFilesContent() {
+        applyContentMode(CONTENT_FILES);
+    }
+
+    @FXML
+    private void selectDiskUsageContent() {
+        applyContentMode(CONTENT_DISK_USAGE);
     }
 
     @FXML
@@ -104,6 +130,44 @@ public class AppController {
     @FXML
     private void selectDetailView() {
         applyViewMode(FormattedDisk.FILE_DISPLAY_DETAIL);
+    }
+
+    private void applyContentMode(int contentMode) {
+        this.currentContentMode = contentMode;
+
+        if (filesContentButton != null) {
+            filesContentButton.setSelected(contentMode == CONTENT_FILES);
+        }
+        if (diskUsageContentButton != null) {
+            diskUsageContentButton.setSelected(contentMode == CONTENT_DISK_USAGE);
+        }
+
+        boolean filesSelected = contentMode == CONTENT_FILES;
+        setViewControlsEnabled(currentDisk != null && filesSelected);
+        if (standardToolButton != null) {
+            standardToolButton.setVisible(filesSelected);
+            standardToolButton.setManaged(filesSelected);
+        }
+        if (nativeToolButton != null) {
+            nativeToolButton.setVisible(filesSelected);
+            nativeToolButton.setManaged(filesSelected);
+        }
+        if (detailToolButton != null) {
+            detailToolButton.setVisible(filesSelected);
+            detailToolButton.setManaged(filesSelected);
+        }
+        if (standardViewMenuItem != null) {
+            standardViewMenuItem.setVisible(filesSelected);
+        }
+        if (nativeViewMenuItem != null) {
+            nativeViewMenuItem.setVisible(filesSelected);
+        }
+        if (detailViewMenuItem != null) {
+            detailViewMenuItem.setVisible(filesSelected);
+        }
+        if (currentDisk != null) {
+            refreshDiskView();
+        }
     }
 
     private void applyViewMode(int displayMode) {
@@ -128,11 +192,17 @@ public class AppController {
             detailViewMenuItem.setSelected(displayMode == FormattedDisk.FILE_DISPLAY_DETAIL);
         }
 
-        boolean enabled = currentDisk != null;
-        setViewControlsEnabled(enabled);
-
         if (currentDisk != null) {
             refreshDiskView();
+        }
+    }
+
+    private void setContentControlsEnabled(boolean enabled) {
+        if (filesContentButton != null) {
+            filesContentButton.setDisable(!enabled);
+        }
+        if (diskUsageContentButton != null) {
+            diskUsageContentButton.setDisable(!enabled);
         }
     }
 
@@ -159,7 +229,8 @@ public class AppController {
 
     private void displayDisk(FormattedDisk disk) {
         currentDisk = disk;
-        setViewControlsEnabled(true);
+        setContentControlsEnabled(true);
+        setViewControlsEnabled(currentContentMode == CONTENT_FILES);
         refreshDiskView();
     }
 
@@ -169,10 +240,17 @@ public class AppController {
         }
 
         try {
+            if (currentContentMode == CONTENT_DISK_USAGE) {
+                fileTable.getColumns().clear();
+                fileTable.setItems(FXCollections.emptyObservableList());
+                statusLabel.setText("Disk usage view selected for: " + currentDisk.getDiskName() + " (" + currentDisk.getFormat() + ")");
+                return;
+            }
             populateDiskRows(currentDisk, currentDisplayMode);
             statusLabel.setText("Open disk: " + currentDisk.getDiskName() + " (" + currentDisk.getFormat() + ")");
         } catch (DiskException ex) {
             currentDisk = null;
+            setContentControlsEnabled(false);
             setViewControlsEnabled(false);
             showErrorDialog("Could not read files from disk image", ex);
             fileTable.setItems(FXCollections.emptyObservableList());
