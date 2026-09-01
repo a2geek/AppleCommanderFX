@@ -26,6 +26,9 @@ public class AppController {
     @FXML private ToggleButton standardToolButton;
     @FXML private ToggleButton nativeToolButton;
     @FXML private ToggleButton detailToolButton;
+    @FXML private RadioMenuItem standardViewMenuItem;
+    @FXML private RadioMenuItem nativeViewMenuItem;
+    @FXML private RadioMenuItem detailViewMenuItem;
 
     private Stage primaryStage;
     private FormattedDisk currentDisk;
@@ -35,6 +38,7 @@ public class AppController {
     private void initialize() {
         fileTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
         fileTable.setItems(FXCollections.emptyObservableList());
+        setViewControlsEnabled(false);
         applyViewMode(currentDisplayMode);
     }
 
@@ -75,6 +79,7 @@ public class AppController {
         currentDisk = null;
         fileTable.setItems(FXCollections.emptyObservableList());
         fileTable.getColumns().clear();
+        setViewControlsEnabled(false);
         statusLabel.setText("No disk image opened.");
         if (primaryStage != null) {
             primaryStage.setTitle("AppleCommanderFX");
@@ -103,6 +108,7 @@ public class AppController {
 
     private void applyViewMode(int displayMode) {
         this.currentDisplayMode = displayMode;
+
         if (standardToolButton != null) {
             standardToolButton.setSelected(displayMode == FormattedDisk.FILE_DISPLAY_STANDARD);
         }
@@ -112,14 +118,48 @@ public class AppController {
         if (detailToolButton != null) {
             detailToolButton.setSelected(displayMode == FormattedDisk.FILE_DISPLAY_DETAIL);
         }
+        if (standardViewMenuItem != null) {
+            standardViewMenuItem.setSelected(displayMode == FormattedDisk.FILE_DISPLAY_STANDARD);
+        }
+        if (nativeViewMenuItem != null) {
+            nativeViewMenuItem.setSelected(displayMode == FormattedDisk.FILE_DISPLAY_NATIVE);
+        }
+        if (detailViewMenuItem != null) {
+            detailViewMenuItem.setSelected(displayMode == FormattedDisk.FILE_DISPLAY_DETAIL);
+        }
+
+        boolean enabled = currentDisk != null;
+        setViewControlsEnabled(enabled);
 
         if (currentDisk != null) {
             refreshDiskView();
         }
     }
 
+    private void setViewControlsEnabled(boolean enabled) {
+        if (standardToolButton != null) {
+            standardToolButton.setDisable(!enabled);
+        }
+        if (nativeToolButton != null) {
+            nativeToolButton.setDisable(!enabled);
+        }
+        if (detailToolButton != null) {
+            detailToolButton.setDisable(!enabled);
+        }
+        if (standardViewMenuItem != null) {
+            standardViewMenuItem.setDisable(!enabled);
+        }
+        if (nativeViewMenuItem != null) {
+            nativeViewMenuItem.setDisable(!enabled);
+        }
+        if (detailViewMenuItem != null) {
+            detailViewMenuItem.setDisable(!enabled);
+        }
+    }
+
     private void displayDisk(FormattedDisk disk) {
         currentDisk = disk;
+        setViewControlsEnabled(true);
         refreshDiskView();
     }
 
@@ -133,6 +173,7 @@ public class AppController {
             statusLabel.setText("Open disk: " + currentDisk.getDiskName() + " (" + currentDisk.getFormat() + ")");
         } catch (DiskException ex) {
             currentDisk = null;
+            setViewControlsEnabled(false);
             showErrorDialog("Could not read files from disk image", ex);
             fileTable.setItems(FXCollections.emptyObservableList());
             fileTable.getColumns().clear();

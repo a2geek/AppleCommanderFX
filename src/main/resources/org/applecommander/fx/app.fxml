@@ -24,9 +24,9 @@
                         </Menu>
                         <Menu text="View">
                             <items>
-                                <RadioMenuItem text="Standard" onAction="#selectStandardView" toggleGroup="$viewModeGroup" selected="true" />
-                                <RadioMenuItem text="Native" onAction="#selectNativeView" toggleGroup="$viewModeGroup" />
-                                <RadioMenuItem text="Detail" onAction="#selectDetailView" toggleGroup="$viewModeGroup" />
+                                <RadioMenuItem fx:id="standardViewMenuItem" text="Standard" onAction="#selectStandardView" toggleGroup="$viewModeGroup" selected="true" disable="true" />
+                                <RadioMenuItem fx:id="nativeViewMenuItem" text="Native" onAction="#selectNativeView" toggleGroup="$viewModeGroup" disable="true" />
+                                <RadioMenuItem fx:id="detailViewMenuItem" text="Detail" onAction="#selectDetailView" toggleGroup="$viewModeGroup" disable="true" />
                             </items>
                         </Menu>
                     </menus>
@@ -50,7 +50,7 @@
                         <Separator orientation="VERTICAL" />
                         <HBox spacing="0">
                             <children>
-                                <ToggleButton fx:id="standardToolButton" toggleGroup="$viewModeGroup" selected="true" onAction="#selectStandardView" style="-fx-padding: 4 8 4 8; -fx-background-radius: 0; -fx-border-radius: 0; -fx-background-insets: 0;">
+                                <ToggleButton fx:id="standardToolButton" toggleGroup="$viewModeGroup" selected="true" onAction="#selectStandardView" disable="true" style="-fx-padding: 4 8 4 8; -fx-background-radius: 0; -fx-border-radius: 0; -fx-background-insets: 0;">
                                     <graphic>
                                         <VBox alignment="CENTER" spacing="2">
                                             <ImageView fitWidth="24" fitHeight="24" preserveRatio="true">
@@ -62,7 +62,7 @@
                                         </VBox>
                                     </graphic>
                                 </ToggleButton>
-                                <ToggleButton fx:id="nativeToolButton" toggleGroup="$viewModeGroup" onAction="#selectNativeView" style="-fx-padding: 4 8 4 8; -fx-background-radius: 0; -fx-border-radius: 0; -fx-background-insets: 0;">
+                                <ToggleButton fx:id="nativeToolButton" toggleGroup="$viewModeGroup" onAction="#selectNativeView" disable="true" style="-fx-padding: 4 8 4 8; -fx-background-radius: 0; -fx-border-radius: 0; -fx-background-insets: 0;">
                                     <graphic>
                                         <VBox alignment="CENTER" spacing="2">
                                             <ImageView fitWidth="24" fitHeight="24" preserveRatio="true">
@@ -74,7 +74,7 @@
                                         </VBox>
                                     </graphic>
                                 </ToggleButton>
-                                <ToggleButton fx:id="detailToolButton" toggleGroup="$viewModeGroup" onAction="#selectDetailView" style="-fx-padding: 4 8 4 8; -fx-background-radius: 0; -fx-border-radius: 0; -fx-background-insets: 0;">
+                                <ToggleButton fx:id="detailToolButton" toggleGroup="$viewModeGroup" onAction="#selectDetailView" disable="true" style="-fx-padding: 4 8 4 8; -fx-background-radius: 0; -fx-border-radius: 0; -fx-background-insets: 0;">
                                     <graphic>
                                         <VBox alignment="CENTER" spacing="2">
                                             <ImageView fitWidth="24" fitHeight="24" preserveRatio="true">
