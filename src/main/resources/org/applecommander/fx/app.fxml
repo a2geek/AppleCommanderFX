@@ -98,9 +98,9 @@
         <TableView fx:id="fileTable" prefWidth="1100" prefHeight="600">
             <placeholder>
                 <VBox alignment="CENTER" spacing="10">
-                    <ImageView fitWidth="200" fitHeight="120" preserveRatio="true">
+                    <ImageView preserveRatio="true">
                         <image>
-                            <Image url="@/org/applecommander/images/AppleCommanderLogo.jpg" />
+                            <Image url="@/org/applecommander/images/AppleCommanderLogo.png" />
                         </image>
                     </ImageView>
                     <Label text="No disk image open. Use File &gt; Open to browse for a disk image." style="-fx-font-size: 14px;" />
