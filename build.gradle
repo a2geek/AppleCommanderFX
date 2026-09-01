@@ -15,6 +15,7 @@ java {
 
 repositories {
     mavenCentral()
+    maven { url 'https://jitpack.io' }
 }
 
 javafx {
@@ -28,6 +29,7 @@ application {
 
 dependencies {
     implementation 'org.applecommander:AppleCommander:14.1'
+    implementation 'com.github.Dansoftowner:jSystemThemeDetector:3.6'
 
     testImplementation platform('org.junit:junit-bom:6.0.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'

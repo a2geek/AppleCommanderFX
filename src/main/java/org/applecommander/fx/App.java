@@ -1,17 +1,18 @@
 package org.applecommander.fx;
 
+import com.jthemedetecor.OsThemeDetector;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.Locale;
 
 public class App extends Application {
+    private Scene scene;
+
     public static void main(String[] args) {
         launch(args);
     }
@@ -24,8 +25,11 @@ public class App extends Application {
         AppController controller = loader.getController();
         controller.setPrimaryStage(stage);
 
-        Scene scene = new Scene(root, 1100, 700);
-        applySystemTheme(scene);
+        scene = new Scene(root, 1100, 700);
+        applyTheme();
+
+        final OsThemeDetector detector = OsThemeDetector.getDetector();
+        detector.registerListener(isDark -> Platform.runLater(this::applyTheme));
 
         stage.setTitle("AppleCommanderFX");
         stage.setScene(scene);
@@ -34,44 +38,15 @@ public class App extends Application {
         stage.show();
     }
 
-    private void applySystemTheme(Scene scene) {
-        String cssPath = isDarkModeEnabled() ? "/org/applecommander/fx/theme-dark.css" : "/org/applecommander/fx/theme-light.css";
+    private void applyTheme() {
+        if (scene == null) {
+            return;
+        }
+
+        scene.getStylesheets().clear();
+        String cssPath = OsThemeDetector.getDetector().isDark() ?
+                "/org/applecommander/fx/theme-dark.css" :
+                "/org/applecommander/fx/theme-light.css";
         scene.getStylesheets().add(getClass().getResource(cssPath).toExternalForm());
-    }
-
-    private boolean isDarkModeEnabled() {
-        String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
-
-        try {
-            if (os.contains("mac")) {
-                return readProcessOutput("defaults", "read", "-g", "AppleInterfaceStyle")
-                        .contains("Dark");
-            }
-            if (os.contains("win")) {
-                String result = readProcessOutput("cmd", "/c", "reg", "query", "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize", "/v", "AppsUseLightTheme");
-                return result.contains("0x0") || result.contains("0x00");
-            }
-            if (os.contains("linux")) {
-                String result = readProcessOutput("gsettings", "get", "org.gnome.desktop.interface", "color-scheme");
-                return result.contains("dark");
-            }
-        } catch (Exception ignored) {
-            // Fall back to the light theme when detection is unavailable.
-        }
-
-        return false;
-    }
-
-    private String readProcessOutput(String... command) throws IOException {
-        ProcessBuilder builder = new ProcessBuilder(command);
-        Process process = builder.start();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-            StringBuilder output = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                output.append(line).append(System.lineSeparator());
-            }
-            return output.toString();
-        }
     }
 }
