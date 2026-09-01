@@ -20,8 +20,12 @@ import org.applecommander.source.FileSource;
 import java.io.File;
 import java.util.Comparator;
 import java.util.List;
+import java.util.prefs.Preferences;
 
 public class AppController {
+    private static final String PREF_NODE = "/org/applecommander/fx";
+    private static final String IMAGE_DIRECTORY_KEY = "image_directory";
+
     @FXML private TableView<DiskFileRow> fileTable;
     @FXML private TableColumn<DiskFileRow, String> nameColumn;
     @FXML private TableColumn<DiskFileRow, String> typeColumn;
@@ -54,6 +58,10 @@ public class AppController {
     private void openDisk() {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Open Apple II disk image");
+        File lastDirectory = getLastOpenedDirectory();
+        if (lastDirectory != null && lastDirectory.isDirectory()) {
+            fileChooser.setInitialDirectory(lastDirectory);
+        }
         fileChooser.getExtensionFilters().addAll(
                 new FileChooser.ExtensionFilter("Disk images", "*.dsk", "*.img", "*.po", "*.nib", "*.2mg", "*.woz", "*.hdv"),
                 new FileChooser.ExtensionFilter("All files", "*.*")
@@ -65,6 +73,7 @@ public class AppController {
         }
 
         try {
+            saveLastOpenedDirectory(selectedFile.getParentFile());
             FormattedDisk disk = Disks.inspect(new FileSource(selectedFile.toPath())).disks.get(0);
             displayDisk(disk);
             primaryStage.setTitle("AppleCommanderFX - " + selectedFile.getName());
@@ -115,6 +124,26 @@ public class AppController {
                 fileEntry.isLocked(),
                 fileEntry.isDeleted() || fileEntry.isDirectory()
         );
+    }
+
+    private File getLastOpenedDirectory() {
+        Preferences prefs = Preferences.userRoot().node(PREF_NODE);
+        String directoryPath = prefs.get(IMAGE_DIRECTORY_KEY, null);
+        if (directoryPath == null || directoryPath.isBlank()) {
+            return null;
+        }
+
+        File directory = new File(directoryPath);
+        return directory.isDirectory() ? directory : null;
+    }
+
+    private void saveLastOpenedDirectory(File directory) {
+        if (directory == null || !directory.isDirectory()) {
+            return;
+        }
+
+        Preferences prefs = Preferences.userRoot().node(PREF_NODE);
+        prefs.put(IMAGE_DIRECTORY_KEY, directory.getAbsolutePath());
     }
 
     private void showErrorDialog(String message, Exception ex) {
