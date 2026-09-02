@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.scene.canvas.Canvas?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.scene.canvas.Canvas?>
 <BorderPane xmlns="http://javafx.com/javafx"
             xmlns:fx="http://javafx.com/fxml"
             fx:controller="org.applecommander.fx.AppController">
@@ -57,41 +57,57 @@
                     </children>
                 </HBox>
                 <Separator orientation="VERTICAL" />
-                <HBox spacing="0">
+                <HBox spacing="4">
                     <children>
-                        <ToggleButton fx:id="standardToolButton" toggleGroup="$viewModeGroup" selected="true" onAction="#selectStandardView" disable="true" style="-fx-padding: 4 8 4 8; -fx-background-radius: 0; -fx-border-radius: 0; -fx-background-insets: 0;">
+                        <HBox spacing="0">
+                            <children>
+                                <ToggleButton fx:id="standardToolButton" toggleGroup="$viewModeGroup" selected="true" onAction="#selectStandardView" disable="true" style="-fx-padding: 4 8 4 8; -fx-background-radius: 0; -fx-border-radius: 0; -fx-background-insets: 0;">
+                                    <graphic>
+                                        <VBox alignment="CENTER" spacing="2">
+                                            <ImageView fitWidth="24" fitHeight="24" preserveRatio="true">
+                                                <image>
+                                                    <Image url="@/org/applecommander/images/selection-standard.png" />
+                                                </image>
+                                            </ImageView>
+                                            <Label text="Standard" />
+                                        </VBox>
+                                    </graphic>
+                                </ToggleButton>
+                                <ToggleButton fx:id="nativeToolButton" toggleGroup="$viewModeGroup" onAction="#selectNativeView" disable="true" style="-fx-padding: 4 8 4 8; -fx-background-radius: 0; -fx-border-radius: 0; -fx-background-insets: 0;">
+                                    <graphic>
+                                        <VBox alignment="CENTER" spacing="2">
+                                            <ImageView fitWidth="24" fitHeight="24" preserveRatio="true">
+                                                <image>
+                                                    <Image url="@/org/applecommander/images/selection-native.png" />
+                                                </image>
+                                            </ImageView>
+                                            <Label text="Native" />
+                                        </VBox>
+                                    </graphic>
+                                </ToggleButton>
+                                <ToggleButton fx:id="detailToolButton" toggleGroup="$viewModeGroup" onAction="#selectDetailView" disable="true" style="-fx-padding: 4 8 4 8; -fx-background-radius: 0; -fx-border-radius: 0; -fx-background-insets: 0;">
+                                    <graphic>
+                                        <VBox alignment="CENTER" spacing="2">
+                                            <ImageView fitWidth="24" fitHeight="24" preserveRatio="true">
+                                                <image>
+                                                    <Image url="@/org/applecommander/images/selection-detail.png" />
+                                                </image>
+                                            </ImageView>
+                                            <Label text="Detail" />
+                                        </VBox>
+                                    </graphic>
+                                </ToggleButton>
+                            </children>
+                        </HBox>
+                        <ToggleButton fx:id="deletedFilesToggleButton" onAction="#toggleDeletedFiles" disable="true" style="-fx-padding: 4 8 4 8; -fx-background-radius: 0; -fx-border-radius: 0; -fx-background-insets: 0;">
                             <graphic>
                                 <VBox alignment="CENTER" spacing="2">
-                                    <ImageView fitWidth="24" fitHeight="24" preserveRatio="true">
+                                    <ImageView fx:id="deletedFilesIcon" fitWidth="24" fitHeight="24" preserveRatio="true">
                                         <image>
-                                            <Image url="@/org/applecommander/images/selection-standard.png" />
+                                            <Image url="@/org/applecommander/images/deleted-files-hidden.png" />
                                         </image>
                                     </ImageView>
-                                    <Label text="Standard" />
-                                </VBox>
-                            </graphic>
-                        </ToggleButton>
-                        <ToggleButton fx:id="nativeToolButton" toggleGroup="$viewModeGroup" onAction="#selectNativeView" disable="true" style="-fx-padding: 4 8 4 8; -fx-background-radius: 0; -fx-border-radius: 0; -fx-background-insets: 0;">
-                            <graphic>
-                                <VBox alignment="CENTER" spacing="2">
-                                    <ImageView fitWidth="24" fitHeight="24" preserveRatio="true">
-                                        <image>
-                                            <Image url="@/org/applecommander/images/selection-native.png" />
-                                        </image>
-                                    </ImageView>
-                                    <Label text="Native" />
-                                </VBox>
-                            </graphic>
-                        </ToggleButton>
-                        <ToggleButton fx:id="detailToolButton" toggleGroup="$viewModeGroup" onAction="#selectDetailView" disable="true" style="-fx-padding: 4 8 4 8; -fx-background-radius: 0; -fx-border-radius: 0; -fx-background-insets: 0;">
-                            <graphic>
-                                <VBox alignment="CENTER" spacing="2">
-                                    <ImageView fitWidth="24" fitHeight="24" preserveRatio="true">
-                                        <image>
-                                            <Image url="@/org/applecommander/images/selection-detail.png" />
-                                        </image>
-                                    </ImageView>
-                                    <Label text="Detail" />
+                                    <Label text="Deleted" />
                                 </VBox>
                             </graphic>
                         </ToggleButton>

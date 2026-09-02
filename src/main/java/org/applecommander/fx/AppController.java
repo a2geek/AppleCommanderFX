@@ -1,10 +1,10 @@
 package org.applecommander.fx;
 
+import com.jthemedetecor.OsThemeDetector;
 import com.webcodepro.applecommander.storage.DiskException;
 import com.webcodepro.applecommander.storage.Disks;
 import com.webcodepro.applecommander.storage.FormattedDisk;
 import javafx.application.Platform;
-import com.jthemedetecor.OsThemeDetector;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
@@ -32,6 +32,8 @@ public class AppController {
     @FXML private ToggleButton standardToolButton;
     @FXML private ToggleButton nativeToolButton;
     @FXML private ToggleButton detailToolButton;
+    @FXML private ToggleButton deletedFilesToggleButton;
+    @FXML private javafx.scene.image.ImageView deletedFilesIcon;
     @FXML private RadioMenuItem standardViewMenuItem;
     @FXML private RadioMenuItem nativeViewMenuItem;
     @FXML private RadioMenuItem detailViewMenuItem;
@@ -45,11 +47,13 @@ public class AppController {
     private FormattedDisk currentDisk;
     private int currentContentMode = CONTENT_FILES;
     private int currentDisplayMode = FormattedDisk.FILE_DISPLAY_STANDARD;
+    private boolean showDeletedFiles = false;
 
     @FXML
     private void initialize() {
         fileTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
         fileTable.setItems(FXCollections.emptyObservableList());
+        setDeletedFilesButtonState();
         setContentControlsEnabled(false);
         setViewControlsEnabled(false);
         applyContentMode(currentContentMode);
@@ -98,6 +102,7 @@ public class AppController {
     private void closeDisk() {
         currentDisk = null;
         currentContentMode = CONTENT_FILES;
+        showDeletedFiles = false;
         fileTable.setItems(FXCollections.emptyObservableList());
         fileTable.getColumns().clear();
         setContentControlsEnabled(false);
@@ -108,6 +113,7 @@ public class AppController {
         if (diskUsageContentButton != null) {
             diskUsageContentButton.setSelected(false);
         }
+        setDeletedFilesButtonState();
         statusLabel.setText("No disk image opened.");
         if (primaryStage != null) {
             primaryStage.setTitle("AppleCommanderFX");
@@ -144,6 +150,15 @@ public class AppController {
         applyViewMode(FormattedDisk.FILE_DISPLAY_DETAIL);
     }
 
+    @FXML
+    private void toggleDeletedFiles() {
+        showDeletedFiles = deletedFilesToggleButton != null && deletedFilesToggleButton.isSelected();
+        setDeletedFilesButtonState();
+        if (currentDisk != null && currentContentMode == CONTENT_FILES) {
+            refreshDiskView();
+        }
+    }
+
     private void applyContentMode(int contentMode) {
         this.currentContentMode = contentMode;
 
@@ -176,6 +191,11 @@ public class AppController {
         }
         if (detailViewMenuItem != null) {
             detailViewMenuItem.setVisible(filesSelected);
+        }
+        if (deletedFilesToggleButton != null) {
+            deletedFilesToggleButton.setVisible(filesSelected);
+            deletedFilesToggleButton.setManaged(filesSelected);
+            deletedFilesToggleButton.setDisable(currentDisk == null || !filesSelected);
         }
 
         // toggle which content pane is visible
@@ -227,6 +247,9 @@ public class AppController {
         if (diskUsageContentButton != null) {
             diskUsageContentButton.setDisable(!enabled);
         }
+        if (deletedFilesToggleButton != null) {
+            deletedFilesToggleButton.setDisable(!enabled || currentContentMode != CONTENT_FILES);
+        }
     }
 
     private void setViewControlsEnabled(boolean enabled) {
@@ -253,6 +276,7 @@ public class AppController {
     private void displayDisk(FormattedDisk disk) {
         currentDisk = disk;
         setContentControlsEnabled(true);
+        setDeletedFilesButtonState();
 
         // Enable disk-usage only if the disk reports support
         if (diskUsageContentButton != null) {
@@ -546,11 +570,26 @@ public class AppController {
         }
 
         List<DiskFileRow> rows = disk.getFiles().stream()
+                .filter(fileEntry -> showDeletedFiles || !fileEntry.isDeleted())
                 .map(fileEntry -> new DiskFileRow(fileEntry.getFileColumnData(displayMode)))
                 .sorted(Comparator.comparing(row -> row.values().isEmpty() ? "" : row.values().get(0)))
                 .toList();
 
         fileTable.setItems(FXCollections.observableArrayList(rows));
+    }
+
+    private void setDeletedFilesButtonState() {
+        if (deletedFilesToggleButton == null) {
+            return;
+        }
+
+        deletedFilesToggleButton.setSelected(showDeletedFiles);
+        if (deletedFilesIcon != null) {
+            String imagePath = showDeletedFiles
+                    ? "/org/applecommander/images/deleted-files-visible.png"
+                    : "/org/applecommander/images/deleted-files-hidden.png";
+            deletedFilesIcon.setImage(new javafx.scene.image.Image(getClass().getResource(imagePath).toExternalForm()));
+        }
     }
 
     private File getLastOpenedDirectory() {
