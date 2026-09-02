@@ -13,116 +13,92 @@
     </fx:define>
 
     <top>
-        <BorderPane>
-            <top>
-                <MenuBar>
-                    <menus>
-                        <Menu text="File">
-                            <items>
-                                <MenuItem text="Open..." onAction="#openDisk" />
-                                <MenuItem text="Close" onAction="#closeDisk" />
-                                <MenuItem text="Exit" onAction="#exitApplication" />
-                            </items>
-                        </Menu>
-                        <Menu text="View">
-                            <items>
-                                <RadioMenuItem fx:id="standardViewMenuItem" text="Standard" onAction="#selectStandardView" toggleGroup="$viewModeGroup" selected="true" disable="true" />
-                                <RadioMenuItem fx:id="nativeViewMenuItem" text="Native" onAction="#selectNativeView" toggleGroup="$viewModeGroup" disable="true" />
-                                <RadioMenuItem fx:id="detailViewMenuItem" text="Detail" onAction="#selectDetailView" toggleGroup="$viewModeGroup" disable="true" />
-                            </items>
-                        </Menu>
-                    </menus>
-                </MenuBar>
-            </top>
-            <center>
-                <ToolBar>
-                    <items>
-                        <Button onAction="#openDisk" style="-fx-padding: 4 8 4 8; -fx-background-radius: 0;">
+        <ToolBar>
+            <items>
+                <Button onAction="#openDisk" style="-fx-padding: 4 8 4 8; -fx-background-radius: 0;">
+                    <graphic>
+                        <VBox alignment="CENTER" spacing="2">
+                            <ImageView fitWidth="24" fitHeight="24" preserveRatio="true">
+                                <image>
+                                    <Image url="@/org/applecommander/images/open-file.png" />
+                                </image>
+                            </ImageView>
+                            <Label text="Open" />
+                        </VBox>
+                    </graphic>
+                </Button>
+                <Separator orientation="VERTICAL" />
+                <HBox spacing="0">
+                    <children>
+                        <ToggleButton fx:id="filesContentButton" toggleGroup="$contentModeGroup" selected="true" onAction="#selectFilesContent" disable="true" style="-fx-padding: 4 8 4 8; -fx-background-radius: 0; -fx-border-radius: 0; -fx-background-insets: 0;">
                             <graphic>
                                 <VBox alignment="CENTER" spacing="2">
                                     <ImageView fitWidth="24" fitHeight="24" preserveRatio="true">
                                         <image>
-                                            <Image url="@/org/applecommander/images/open-file.png" />
+                                            <Image url="@/org/applecommander/images/tree-view.png" />
                                         </image>
                                     </ImageView>
-                                    <Label text="Open" />
+                                    <Label text="Files" />
                                 </VBox>
                             </graphic>
-                        </Button>
-                        <Separator orientation="VERTICAL" />
-                        <HBox spacing="0">
-                            <children>
-                                <ToggleButton fx:id="filesContentButton" toggleGroup="$contentModeGroup" selected="true" onAction="#selectFilesContent" disable="true" style="-fx-padding: 4 8 4 8; -fx-background-radius: 0; -fx-border-radius: 0; -fx-background-insets: 0;">
-                                    <graphic>
-                                        <VBox alignment="CENTER" spacing="2">
-                                            <ImageView fitWidth="24" fitHeight="24" preserveRatio="true">
-                                                <image>
-                                                    <Image url="@/org/applecommander/images/tree-view.png" />
-                                                </image>
-                                            </ImageView>
-                                            <Label text="Files" />
-                                        </VBox>
-                                    </graphic>
-                                </ToggleButton>
-                                <ToggleButton fx:id="diskUsageContentButton" toggleGroup="$contentModeGroup" onAction="#selectDiskUsageContent" disable="true" style="-fx-padding: 4 8 4 8; -fx-background-radius: 0; -fx-border-radius: 0; -fx-background-insets: 0;">
-                                    <graphic>
-                                        <VBox alignment="CENTER" spacing="2">
-                                            <ImageView fitWidth="24" fitHeight="24" preserveRatio="true">
-                                                <image>
-                                                    <Image url="@/org/applecommander/images/disk-usage-view.png" />
-                                                </image>
-                                            </ImageView>
-                                            <Label text="Disk Usage" />
-                                        </VBox>
-                                    </graphic>
-                                </ToggleButton>
-                            </children>
-                        </HBox>
-                        <Separator orientation="VERTICAL" />
-                        <HBox spacing="0">
-                            <children>
-                                <ToggleButton fx:id="standardToolButton" toggleGroup="$viewModeGroup" selected="true" onAction="#selectStandardView" disable="true" style="-fx-padding: 4 8 4 8; -fx-background-radius: 0; -fx-border-radius: 0; -fx-background-insets: 0;">
-                                    <graphic>
-                                        <VBox alignment="CENTER" spacing="2">
-                                            <ImageView fitWidth="24" fitHeight="24" preserveRatio="true">
-                                                <image>
-                                                    <Image url="@/org/applecommander/images/selection-standard.png" />
-                                                </image>
-                                            </ImageView>
-                                            <Label text="Standard" />
-                                        </VBox>
-                                    </graphic>
-                                </ToggleButton>
-                                <ToggleButton fx:id="nativeToolButton" toggleGroup="$viewModeGroup" onAction="#selectNativeView" disable="true" style="-fx-padding: 4 8 4 8; -fx-background-radius: 0; -fx-border-radius: 0; -fx-background-insets: 0;">
-                                    <graphic>
-                                        <VBox alignment="CENTER" spacing="2">
-                                            <ImageView fitWidth="24" fitHeight="24" preserveRatio="true">
-                                                <image>
-                                                    <Image url="@/org/applecommander/images/selection-native.png" />
-                                                </image>
-                                            </ImageView>
-                                            <Label text="Native" />
-                                        </VBox>
-                                    </graphic>
-                                </ToggleButton>
-                                <ToggleButton fx:id="detailToolButton" toggleGroup="$viewModeGroup" onAction="#selectDetailView" disable="true" style="-fx-padding: 4 8 4 8; -fx-background-radius: 0; -fx-border-radius: 0; -fx-background-insets: 0;">
-                                    <graphic>
-                                        <VBox alignment="CENTER" spacing="2">
-                                            <ImageView fitWidth="24" fitHeight="24" preserveRatio="true">
-                                                <image>
-                                                    <Image url="@/org/applecommander/images/selection-detail.png" />
-                                                </image>
-                                            </ImageView>
-                                            <Label text="Detail" />
-                                        </VBox>
-                                    </graphic>
-                                </ToggleButton>
-                            </children>
-                        </HBox>
-                    </items>
-                </ToolBar>
-            </center>
-        </BorderPane>
+                        </ToggleButton>
+                        <ToggleButton fx:id="diskUsageContentButton" toggleGroup="$contentModeGroup" onAction="#selectDiskUsageContent" disable="true" style="-fx-padding: 4 8 4 8; -fx-background-radius: 0; -fx-border-radius: 0; -fx-background-insets: 0;">
+                            <graphic>
+                                <VBox alignment="CENTER" spacing="2">
+                                    <ImageView fitWidth="24" fitHeight="24" preserveRatio="true">
+                                        <image>
+                                            <Image url="@/org/applecommander/images/disk-usage-view.png" />
+                                        </image>
+                                    </ImageView>
+                                    <Label text="Disk Usage" />
+                                </VBox>
+                            </graphic>
+                        </ToggleButton>
+                    </children>
+                </HBox>
+                <Separator orientation="VERTICAL" />
+                <HBox spacing="0">
+                    <children>
+                        <ToggleButton fx:id="standardToolButton" toggleGroup="$viewModeGroup" selected="true" onAction="#selectStandardView" disable="true" style="-fx-padding: 4 8 4 8; -fx-background-radius: 0; -fx-border-radius: 0; -fx-background-insets: 0;">
+                            <graphic>
+                                <VBox alignment="CENTER" spacing="2">
+                                    <ImageView fitWidth="24" fitHeight="24" preserveRatio="true">
+                                        <image>
+                                            <Image url="@/org/applecommander/images/selection-standard.png" />
+                                        </image>
+                                    </ImageView>
+                                    <Label text="Standard" />
+                                </VBox>
+                            </graphic>
+                        </ToggleButton>
+                        <ToggleButton fx:id="nativeToolButton" toggleGroup="$viewModeGroup" onAction="#selectNativeView" disable="true" style="-fx-padding: 4 8 4 8; -fx-background-radius: 0; -fx-border-radius: 0; -fx-background-insets: 0;">
+                            <graphic>
+                                <VBox alignment="CENTER" spacing="2">
+                                    <ImageView fitWidth="24" fitHeight="24" preserveRatio="true">
+                                        <image>
+                                            <Image url="@/org/applecommander/images/selection-native.png" />
+                                        </image>
+                                    </ImageView>
+                                    <Label text="Native" />
+                                </VBox>
+                            </graphic>
+                        </ToggleButton>
+                        <ToggleButton fx:id="detailToolButton" toggleGroup="$viewModeGroup" onAction="#selectDetailView" disable="true" style="-fx-padding: 4 8 4 8; -fx-background-radius: 0; -fx-border-radius: 0; -fx-background-insets: 0;">
+                            <graphic>
+                                <VBox alignment="CENTER" spacing="2">
+                                    <ImageView fitWidth="24" fitHeight="24" preserveRatio="true">
+                                        <image>
+                                            <Image url="@/org/applecommander/images/selection-detail.png" />
+                                        </image>
+                                    </ImageView>
+                                    <Label text="Detail" />
+                                </VBox>
+                            </graphic>
+                        </ToggleButton>
+                    </children>
+                </HBox>
+            </items>
+        </ToolBar>
     </top>
 
     <center>
