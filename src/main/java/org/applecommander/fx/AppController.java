@@ -7,6 +7,7 @@ import com.webcodepro.applecommander.storage.Disks;
 import com.webcodepro.applecommander.storage.FileEntry;
 import com.webcodepro.applecommander.storage.FormattedDisk;
 import com.webcodepro.applecommander.storage.os.prodos.ProdosFormatDisk;
+import com.webcodepro.applecommander.storage.os.prodos.ProdosVolumeDirectoryHeader;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -647,9 +648,14 @@ public class AppController {
             return;
         }
 
+        String volumeName = currentDisk instanceof ProdosFormatDisk prodosDisk
+                ? prodosDisk.getDiskName().replace("/", "")
+                : "/";
+
         for (int i = 0; i < directoryPath.size(); i++) {
             DirectoryEntry dir = directoryPath.get(i);
-            Button crumb = new Button(dir == currentDisk ? "/" : dir.getDirname());
+            String crumbText = (dir == currentDisk) ? volumeName : dir.getDirname();
+            Button crumb = new Button(crumbText);
             final int index = i;
             crumb.setOnAction(event -> {
                 List<DirectoryEntry> newPath = new java.util.ArrayList<>(directoryPath.subList(0, index + 1));
@@ -658,10 +664,8 @@ public class AppController {
                 currentDirectory = directoryPath.get(directoryPath.size() - 1);
                 refreshDiskView();
             });
-            if (i > 0) {
-                Label separator = new Label("/");
-                breadcrumbBar.getChildren().add(separator);
-            }
+            Label separator = new Label("/");
+            breadcrumbBar.getChildren().add(separator);
             breadcrumbBar.getChildren().add(crumb);
         }
     }
