@@ -118,27 +118,30 @@
     </top>
 
     <center>
-        <StackPane>
-            <children>
-                <TableView fx:id="fileTable" prefWidth="1100" prefHeight="600">
-                    <placeholder>
-                        <VBox alignment="CENTER" spacing="10">
-                            <ImageView preserveRatio="true">
-                                <image>
-                                    <Image url="@/org/applecommander/images/AppleCommanderLogo.png" />
-                                </image>
-                            </ImageView>
-                            <Label text="No disk image open. Use File &gt; Open to browse for a disk image." style="-fx-font-size: 14px;" />
-                        </VBox>
-                    </placeholder>
-                </TableView>
+        <VBox spacing="6">
+            <HBox fx:id="breadcrumbBar" visible="true" managed="true" spacing="6" alignment="CENTER_LEFT" style="-fx-padding: 4 8 0 8;" />
+            <StackPane>
+                <children>
+                    <TableView fx:id="fileTable" prefWidth="1100" prefHeight="600">
+                        <placeholder>
+                            <VBox alignment="CENTER" spacing="10">
+                                <ImageView preserveRatio="true">
+                                    <image>
+                                        <Image url="@/org/applecommander/images/AppleCommanderLogo.png" />
+                                    </image>
+                                </ImageView>
+                                <Label text="No disk image open. Use File &gt; Open to browse for a disk image." style="-fx-font-size: 14px;" />
+                            </VBox>
+                        </placeholder>
+                    </TableView>
 
-                <VBox fx:id="diskUsagePane" alignment="TOP_CENTER" spacing="8" visible="false" managed="false">
-                    <Canvas fx:id="diskUsageCanvas" width="800" height="480" />
-                    <HBox fx:id="legendBox" alignment="CENTER" spacing="12" />
-                </VBox>
-            </children>
-        </StackPane>
+                    <VBox fx:id="diskUsagePane" alignment="TOP_CENTER" spacing="8" visible="false" managed="false">
+                        <Canvas fx:id="diskUsageCanvas" width="800" height="480" />
+                        <HBox fx:id="legendBox" alignment="CENTER" spacing="12" />
+                    </VBox>
+                </children>
+            </StackPane>
+        </VBox>
     </center>
 
     <bottom>

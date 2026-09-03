@@ -2,8 +2,11 @@ package org.applecommander.fx;
 
 import com.jthemedetecor.OsThemeDetector;
 import com.webcodepro.applecommander.storage.DiskException;
+import com.webcodepro.applecommander.storage.DirectoryEntry;
 import com.webcodepro.applecommander.storage.Disks;
+import com.webcodepro.applecommander.storage.FileEntry;
 import com.webcodepro.applecommander.storage.FormattedDisk;
+import com.webcodepro.applecommander.storage.os.prodos.ProdosFormatDisk;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -37,6 +40,7 @@ public class AppController {
     @FXML private RadioMenuItem standardViewMenuItem;
     @FXML private RadioMenuItem nativeViewMenuItem;
     @FXML private RadioMenuItem detailViewMenuItem;
+    @FXML private javafx.scene.layout.HBox breadcrumbBar;
 
     // Disk usage UI
     @FXML private javafx.scene.layout.VBox diskUsagePane;
@@ -45,6 +49,8 @@ public class AppController {
 
     private Stage primaryStage;
     private FormattedDisk currentDisk;
+    private DirectoryEntry currentDirectory;
+    private List<DirectoryEntry> directoryPath = new java.util.ArrayList<>();
     private int currentContentMode = CONTENT_FILES;
     private int currentDisplayMode = FormattedDisk.FILE_DISPLAY_STANDARD;
     private boolean showDeletedFiles = false;
@@ -53,6 +59,19 @@ public class AppController {
     private void initialize() {
         fileTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
         fileTable.setItems(FXCollections.emptyObservableList());
+        fileTable.setOnMouseClicked(event -> {
+            if (event.getClickCount() != 2) {
+                return;
+            }
+            DiskFileRow selectedRow = fileTable.getSelectionModel().getSelectedItem();
+            if (selectedRow == null || selectedRow.fileEntry() == null) {
+                return;
+            }
+            FileEntry entry = selectedRow.fileEntry();
+            if (entry.isDirectory() && entry instanceof DirectoryEntry directoryEntry) {
+                navigateToDirectory(directoryEntry);
+            }
+        });
         setDeletedFilesButtonState();
         setContentControlsEnabled(false);
         setViewControlsEnabled(false);
@@ -101,6 +120,8 @@ public class AppController {
     @FXML
     private void closeDisk() {
         currentDisk = null;
+        currentDirectory = null;
+        directoryPath.clear();
         currentContentMode = CONTENT_FILES;
         showDeletedFiles = false;
         fileTable.setItems(FXCollections.emptyObservableList());
@@ -197,6 +218,11 @@ public class AppController {
             deletedFilesToggleButton.setManaged(filesSelected);
             deletedFilesToggleButton.setDisable(currentDisk == null || !filesSelected);
         }
+        if (breadcrumbBar != null) {
+            boolean breadcrumbSupported = currentDisk instanceof ProdosFormatDisk;
+            breadcrumbBar.setVisible(filesSelected && breadcrumbSupported);
+            breadcrumbBar.setManaged(filesSelected && breadcrumbSupported);
+        }
 
         // toggle which content pane is visible
         if (fileTable != null) {
@@ -275,6 +301,9 @@ public class AppController {
 
     private void displayDisk(FormattedDisk disk) {
         currentDisk = disk;
+        currentDirectory = disk;
+        directoryPath = new java.util.ArrayList<>();
+        directoryPath.add(disk);
         setContentControlsEnabled(true);
         setDeletedFilesButtonState();
 
@@ -292,12 +321,37 @@ public class AppController {
         refreshDiskView();
     }
 
+    private void navigateToDirectory(DirectoryEntry directory) {
+        if (directory == null) {
+            return;
+        }
+        currentDirectory = directory;
+        if (directoryPath.contains(directory)) {
+            while (directoryPath.size() > 1 && !directoryPath.get(directoryPath.size() - 1).equals(directory)) {
+                directoryPath.remove(directoryPath.size() - 1);
+            }
+        } else {
+            directoryPath.add(directory);
+        }
+        refreshDiskView();
+    }
+
     private void refreshDiskView() {
         if (currentDisk == null) {
+            if (breadcrumbBar != null) {
+                breadcrumbBar.setVisible(false);
+                breadcrumbBar.setManaged(false);
+            }
             return;
         }
 
         try {
+            if (breadcrumbBar != null) {
+                boolean breadcrumbSupported = currentContentMode == CONTENT_FILES && currentDisk instanceof ProdosFormatDisk;
+                breadcrumbBar.setVisible(breadcrumbSupported);
+                breadcrumbBar.setManaged(breadcrumbSupported);
+            }
+            refreshBreadcrumbs();
             if (currentContentMode == CONTENT_DISK_USAGE) {
                 // Render the disk usage map
                 renderDiskUsage(currentDisk);
@@ -313,7 +367,7 @@ public class AppController {
                 fileTable.setVisible(true);
                 fileTable.setManaged(true);
             }
-            populateDiskRows(currentDisk, currentDisplayMode);
+            populateDiskRows(currentDirectory, currentDisplayMode);
             statusLabel.setText("Open disk: " + currentDisk.getDiskName() + " (" + currentDisk.getFormat() + ")");
         } catch (DiskException ex) {
             currentDisk = null;
@@ -549,9 +603,9 @@ public class AppController {
         }
     }
 
-    private void populateDiskRows(FormattedDisk disk, int displayMode) throws DiskException {
+    private void populateDiskRows(DirectoryEntry directory, int displayMode) throws DiskException {
         fileTable.getColumns().clear();
-        List<FormattedDisk.FileColumnHeader> headers = disk.getFileColumnHeaders(displayMode);
+        List<FormattedDisk.FileColumnHeader> headers = currentDisk.getFileColumnHeaders(displayMode);
 
         for (int i = 0; i < headers.size(); i++) {
             final int columnIndex = i;
@@ -569,13 +623,47 @@ public class AppController {
             fileTable.getColumns().add(column);
         }
 
-        List<DiskFileRow> rows = disk.getFiles().stream()
+        List<DiskFileRow> rows = directory.getFiles().stream()
                 .filter(fileEntry -> showDeletedFiles || !fileEntry.isDeleted())
-                .map(fileEntry -> new DiskFileRow(fileEntry.getFileColumnData(displayMode)))
+                .map(fileEntry -> new DiskFileRow(fileEntry, fileEntry.getFileColumnData(displayMode)))
                 .sorted(Comparator.comparing(row -> row.values().isEmpty() ? "" : row.values().get(0)))
                 .toList();
 
         fileTable.setItems(FXCollections.observableArrayList(rows));
+    }
+
+    private void refreshBreadcrumbs() {
+        if (breadcrumbBar == null) {
+            return;
+        }
+        breadcrumbBar.getChildren().clear();
+        if (!(currentDisk instanceof ProdosFormatDisk)) {
+            return;
+        }
+
+        Label pathLabel = new Label("Path:");
+        breadcrumbBar.getChildren().add(pathLabel);
+        if (directoryPath == null || directoryPath.isEmpty()) {
+            return;
+        }
+
+        for (int i = 0; i < directoryPath.size(); i++) {
+            DirectoryEntry dir = directoryPath.get(i);
+            Button crumb = new Button(dir == currentDisk ? "/" : dir.getDirname());
+            final int index = i;
+            crumb.setOnAction(event -> {
+                List<DirectoryEntry> newPath = new java.util.ArrayList<>(directoryPath.subList(0, index + 1));
+                directoryPath.clear();
+                directoryPath.addAll(newPath);
+                currentDirectory = directoryPath.get(directoryPath.size() - 1);
+                refreshDiskView();
+            });
+            if (i > 0) {
+                Label separator = new Label("/");
+                breadcrumbBar.getChildren().add(separator);
+            }
+            breadcrumbBar.getChildren().add(crumb);
+        }
     }
 
     private void setDeletedFilesButtonState() {
@@ -620,6 +708,6 @@ public class AppController {
         alert.showAndWait();
     }
 
-    public record DiskFileRow(List<String> values) {
+    public record DiskFileRow(FileEntry fileEntry, List<String> values) {
     }
 }
