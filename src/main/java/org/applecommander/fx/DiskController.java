@@ -107,6 +107,35 @@ public class DiskController {
             return;
         }
 
+        openDiskFile(selectedFile, true);
+    }
+
+    public void openDiskFile(File selectedFile, boolean promptForWindow) {
+        if (selectedFile == null) {
+            return;
+        }
+
+        if (promptForWindow && currentDisk != null) {
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            alert.initOwner(primaryStage);
+            alert.setTitle("Open disk image");
+            alert.setHeaderText("A disk image is already open.");
+            alert.setContentText("Would you like to open this disk in the current window or in a new window?");
+            ButtonType newWindow = new ButtonType("New Window", ButtonBar.ButtonData.YES);
+            ButtonType thisWindow = new ButtonType("This Window", ButtonBar.ButtonData.NO);
+            ButtonType cancel = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+            alert.getButtonTypes().setAll(thisWindow, newWindow, cancel);
+
+            java.util.Optional<ButtonType> result = alert.showAndWait();
+            if (result.isEmpty() || result.get() == cancel) {
+                return;
+            }
+            if (result.get() == newWindow) {
+                AppleCommanderFX.openNewWindow(selectedFile);
+                return;
+            }
+        }
+
         try {
             saveLastOpenedDirectory(selectedFile.getParentFile());
             var inspected = Disks.inspect(new FileSource(selectedFile.toPath()));
@@ -117,7 +146,9 @@ public class DiskController {
                 return;
             }
             displayDisk(availableDisks.get(currentDiskIndex));
-            primaryStage.setTitle("AppleCommanderFX - " + selectedFile.getName());
+            if (primaryStage != null) {
+                primaryStage.setTitle("AppleCommanderFX - " + selectedFile.getName());
+            }
         } catch (Exception ex) {
             showErrorDialog("Could not open disk image", ex);
         }
