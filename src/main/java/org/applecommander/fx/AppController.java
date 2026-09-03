@@ -1,13 +1,8 @@
 package org.applecommander.fx;
 
 import com.jthemedetecor.OsThemeDetector;
-import com.webcodepro.applecommander.storage.DiskException;
-import com.webcodepro.applecommander.storage.DirectoryEntry;
-import com.webcodepro.applecommander.storage.Disks;
-import com.webcodepro.applecommander.storage.FileEntry;
-import com.webcodepro.applecommander.storage.FormattedDisk;
+import com.webcodepro.applecommander.storage.*;
 import com.webcodepro.applecommander.storage.os.prodos.ProdosFormatDisk;
-import com.webcodepro.applecommander.storage.os.prodos.ProdosVolumeDirectoryHeader;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -38,6 +33,7 @@ public class AppController {
     @FXML private ToggleButton detailToolButton;
     @FXML private ToggleButton deletedFilesToggleButton;
     @FXML private javafx.scene.image.ImageView deletedFilesIcon;
+    @FXML private Button switchDiskButton;
     @FXML private RadioMenuItem standardViewMenuItem;
     @FXML private RadioMenuItem nativeViewMenuItem;
     @FXML private RadioMenuItem detailViewMenuItem;
@@ -49,6 +45,8 @@ public class AppController {
     @FXML private javafx.scene.layout.HBox legendBox;
 
     private Stage primaryStage;
+    private List<FormattedDisk> availableDisks = new java.util.ArrayList<>();
+    private int currentDiskIndex = -1;
     private FormattedDisk currentDisk;
     private DirectoryEntry currentDirectory;
     private List<DirectoryEntry> directoryPath = new java.util.ArrayList<>();
@@ -76,6 +74,7 @@ public class AppController {
         setDeletedFilesButtonState();
         setContentControlsEnabled(false);
         setViewControlsEnabled(false);
+        updateSwitchDiskButton();
         applyContentMode(currentContentMode);
         applyViewMode(currentDisplayMode);
 
@@ -110,8 +109,14 @@ public class AppController {
 
         try {
             saveLastOpenedDirectory(selectedFile.getParentFile());
-            FormattedDisk disk = Disks.inspect(new FileSource(selectedFile.toPath())).disks.get(0);
-            displayDisk(disk);
+            var inspected = Disks.inspect(new FileSource(selectedFile.toPath()));
+            availableDisks = inspected.disks;
+            currentDiskIndex = availableDisks.isEmpty() ? -1 : 0;
+            if (availableDisks.isEmpty()) {
+                closeDisk();
+                return;
+            }
+            displayDisk(availableDisks.get(currentDiskIndex));
             primaryStage.setTitle("AppleCommanderFX - " + selectedFile.getName());
         } catch (Exception ex) {
             showErrorDialog("Could not open disk image", ex);
@@ -119,7 +124,22 @@ public class AppController {
     }
 
     @FXML
+    private void switchDisk() {
+        if (availableDisks == null || availableDisks.size() <= 1) {
+            return;
+        }
+        currentDiskIndex = (currentDiskIndex + 1) % availableDisks.size();
+        FormattedDisk nextDisk = availableDisks.get(currentDiskIndex);
+        displayDisk(nextDisk);
+        if (primaryStage != null) {
+            primaryStage.setTitle("AppleCommanderFX - " + nextDisk.getDiskName());
+        }
+    }
+
+    @FXML
     private void closeDisk() {
+        availableDisks.clear();
+        currentDiskIndex = -1;
         currentDisk = null;
         currentDirectory = null;
         directoryPath.clear();
@@ -136,6 +156,7 @@ public class AppController {
             diskUsageContentButton.setSelected(false);
         }
         setDeletedFilesButtonState();
+        updateSwitchDiskButton();
         statusLabel.setText("No disk image opened.");
         if (primaryStage != null) {
             primaryStage.setTitle("AppleCommanderFX");
@@ -302,11 +323,13 @@ public class AppController {
 
     private void displayDisk(FormattedDisk disk) {
         currentDisk = disk;
+        currentDiskIndex = availableDisks.indexOf(disk);
         currentDirectory = disk;
         directoryPath = new java.util.ArrayList<>();
         directoryPath.add(disk);
         setContentControlsEnabled(true);
         setDeletedFilesButtonState();
+        updateSwitchDiskButton();
 
         // Enable disk-usage only if the disk reports support
         if (diskUsageContentButton != null) {
@@ -352,11 +375,12 @@ public class AppController {
                 breadcrumbBar.setVisible(breadcrumbSupported);
                 breadcrumbBar.setManaged(breadcrumbSupported);
             }
+            updateSwitchDiskButton();
             refreshBreadcrumbs();
             if (currentContentMode == CONTENT_DISK_USAGE) {
                 // Render the disk usage map
                 renderDiskUsage(currentDisk);
-                statusLabel.setText("Disk usage view selected for: " + currentDisk.getDiskName() + " (" + currentDisk.getFormat() + ")");
+                statusLabel.setText(buildDiskStatusText());
                 return;
             }
             // Files view
@@ -369,7 +393,7 @@ public class AppController {
                 fileTable.setManaged(true);
             }
             populateDiskRows(currentDirectory, currentDisplayMode);
-            statusLabel.setText("Open disk: " + currentDisk.getDiskName() + " (" + currentDisk.getFormat() + ")");
+            statusLabel.setText(buildDiskStatusText());
         } catch (DiskException ex) {
             currentDisk = null;
             setContentControlsEnabled(false);
@@ -702,6 +726,28 @@ public class AppController {
 
         Preferences prefs = Preferences.userRoot().node(PREF_NODE);
         prefs.put(IMAGE_DIRECTORY_KEY, directory.getAbsolutePath());
+    }
+
+    private void updateSwitchDiskButton() {
+        if (switchDiskButton == null) {
+            return;
+        }
+        boolean enabled = availableDisks != null && availableDisks.size() > 1 && currentDisk != null;
+        switchDiskButton.setDisable(!enabled);
+        switchDiskButton.setVisible(enabled);
+        switchDiskButton.setManaged(enabled);
+    }
+
+    private String buildDiskStatusText() {
+        if (currentDisk == null) {
+            return "No disk image opened.";
+        }
+        String diskName = currentDisk.getDiskName();
+        String format = currentDisk.getFormat();
+        if (availableDisks != null && availableDisks.size() > 1) {
+            return "Current disk (" + (currentDiskIndex + 1) + " of " + availableDisks.size() + "): " + diskName + " (" + format + ")";
+        }
+        return "Current disk: " + diskName + " (" + format + ")";
     }
 
     private void showErrorDialog(String message, Exception ex) {
