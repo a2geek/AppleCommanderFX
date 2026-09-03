@@ -13,7 +13,6 @@ import javafx.stage.Stage;
 import org.applecommander.source.FileSource;
 
 import java.io.File;
-import java.util.Comparator;
 import java.util.List;
 import java.util.prefs.Preferences;
 
@@ -651,7 +650,6 @@ public class AppController {
         List<DiskFileRow> rows = directory.getFiles().stream()
                 .filter(fileEntry -> showDeletedFiles || !fileEntry.isDeleted())
                 .map(fileEntry -> new DiskFileRow(fileEntry, fileEntry.getFileColumnData(displayMode)))
-                .sorted(Comparator.comparing(row -> row.values().isEmpty() ? "" : row.values().get(0)))
                 .toList();
 
         fileTable.setItems(FXCollections.observableArrayList(rows));
