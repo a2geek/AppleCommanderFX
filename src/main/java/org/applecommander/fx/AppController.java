@@ -6,6 +6,7 @@ import com.webcodepro.applecommander.storage.os.prodos.ProdosFormatDisk;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
+import javafx.collections.transformation.SortedList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.stage.FileChooser;
@@ -652,7 +653,11 @@ public class AppController {
                 .map(fileEntry -> new DiskFileRow(fileEntry, fileEntry.getFileColumnData(displayMode)))
                 .toList();
 
-        fileTable.setItems(FXCollections.observableArrayList(rows));
+        javafx.collections.ObservableList<DiskFileRow> rowList = FXCollections.observableArrayList(rows);
+        SortedList<DiskFileRow> sortedRows = new SortedList<>(rowList);
+        sortedRows.comparatorProperty().bind(fileTable.comparatorProperty());
+        fileTable.setItems(sortedRows);
+        fileTable.getSortOrder().clear();
     }
 
     private void refreshBreadcrumbs() {
