@@ -98,9 +98,11 @@ public class DiskController {
             fileChooser.setInitialDirectory(lastDirectory);
         }
         fileChooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("Disk images", "*.dsk", "*.img", "*.po", "*.nib", "*.2mg", "*.woz", "*.hdv"),
                 new FileChooser.ExtensionFilter("All files", "*.*")
         );
+        for (com.webcodepro.applecommander.storage.FilenameFilter filter : com.webcodepro.applecommander.storage.FilenameFilter.getFilenameFilters()) {
+            fileChooser.getExtensionFilters().add(0, new FileChooser.ExtensionFilter(filter.getNames(), filter.getExtensionList()));
+        }
 
         File selectedFile = fileChooser.showOpenDialog(primaryStage);
         if (selectedFile == null) {
