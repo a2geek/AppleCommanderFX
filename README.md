@@ -1,6 +1,12 @@
 # Prototype AppleCommander
 
-This is a prototype for a replacement AppleCommander GUI application. 
+This is a prototype for a replacement AppleCommander GUI application.
+
+For now, to try it, use:
+
+```
+$ ./gradlew run
+```
 
 ![img.png](screenshots/dos33-files.png)
 
