@@ -351,8 +351,8 @@ public class DiskController {
         }
         currentDirectory = directory;
         if (directoryPath.contains(directory)) {
-            while (directoryPath.size() > 1 && !directoryPath.get(directoryPath.size() - 1).equals(directory)) {
-                directoryPath.remove(directoryPath.size() - 1);
+            while (directoryPath.size() > 1 && !directoryPath.getLast().equals(directory)) {
+                directoryPath.removeLast();
             }
         } else {
             directoryPath.add(directory);
@@ -458,7 +458,7 @@ public class DiskController {
             xCount = dims[0];
             yCount = dims[1];
         } else if (isSingleDim) {
-            totalBlocks = (dims != null && dims.length == 1) ? dims[0] : disk.getBitmapLength();
+            totalBlocks = dims != null ? dims[0] : disk.getBitmapLength();
             // Compute a near-square grid to render individual blocks
             int cols = (int) Math.ceil(Math.sqrt(totalBlocks));
             int rows = (int) Math.ceil((double) totalBlocks / cols);
@@ -517,7 +517,7 @@ public class DiskController {
         double availableH = Math.max(10, h - padding * 2 - topLabelHeight);
 
         double cellW = xCount > 0 ? (availableW - (xCount - 1) * gap) / xCount : availableW;
-        double cellH = yCount > 0 ? (availableH - (yCount - 1) * gap) / Math.max(1, yCount) : availableH;
+        double cellH = yCount > 0 ? (availableH - (yCount - 1) * gap) / yCount : availableH;
         gc.clearRect(0, 0, w, h);
 
         // Colors
@@ -546,9 +546,9 @@ public class DiskController {
         double topNumbersY = padding + topTitleHeight + topNumberHeight / 2.0;
         for (int col = 0; col < xCount; col++) {
             // show 0, then every 5th index (0,5,10,...) and always show last index
-            if (col != 0 && (col % 5 != 0) && col != xCount - 1) continue;
+            if ((col % 5 != 0) && col != xCount - 1) continue;
             String label;
-            if (dims == null || (dims != null && dims.length == 1)) {
+            if (dims == null || dims.length == 1) {
                 // single-dimension blocks: top label shows starting block index for column
                 int labelVal = col * yCount;
                 label = Integer.toString(labelVal);
@@ -573,7 +573,7 @@ public class DiskController {
         double leftNumbersX = padding + leftTitleWidth + leftNumberWidth / 2.0;
         for (int row = 0; row < yCount; row++) {
             // show 0, then every 5th index (0,5,10,...) and always show last index
-            if (row != 0 && (row % 5 != 0) && row != yCount - 1) continue;
+            if ((row % 5 != 0) && row != yCount - 1) continue;
             String label = Integer.toString(row);
             double yCenter = padding + topLabelHeight + row * (cellH + gap) + cellH / 2.0;
             gc.fillText(label, leftNumbersX, yCenter);
@@ -638,7 +638,7 @@ public class DiskController {
             TableColumn<DiskFileRow, String> column = new TableColumn<>(header.getTitle());
             column.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().values().get(columnIndex)));
             column.setMinWidth(60);
-            column.setPrefWidth(Math.max(80, Math.min(220, header.getMaximumWidth() * 7)));
+            column.setPrefWidth(Math.clamp(header.getMaximumWidth() * 7L, 80, 220));
             column.setMaxWidth(400);
             if (header.isRightAlign()) {
                 column.setStyle("-fx-alignment: CENTER-RIGHT;");
@@ -688,7 +688,7 @@ public class DiskController {
                 List<DirectoryEntry> newPath = new java.util.ArrayList<>(directoryPath.subList(0, index + 1));
                 directoryPath.clear();
                 directoryPath.addAll(newPath);
-                currentDirectory = directoryPath.get(directoryPath.size() - 1);
+                currentDirectory = directoryPath.getLast();
                 refreshDiskView();
             });
             Label separator = new Label("/");
