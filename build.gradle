@@ -24,7 +24,7 @@ javafx {
 }
 
 application {
-    mainClass = 'org.applecommander.fx.App'
+    mainClass = 'org.applecommander.fx.AppleCommanderFX'
 }
 
 dependencies {

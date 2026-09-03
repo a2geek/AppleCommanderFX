@@ -6,7 +6,7 @@
 <?import javafx.scene.layout.*?>
 <BorderPane xmlns="http://javafx.com/javafx"
             xmlns:fx="http://javafx.com/fxml"
-            fx:controller="org.applecommander.fx.AppController">
+            fx:controller="org.applecommander.fx.DiskController">
     <fx:define>
         <ToggleGroup fx:id="contentModeGroup" />
         <ToggleGroup fx:id="viewModeGroup" />
