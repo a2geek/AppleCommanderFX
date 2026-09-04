@@ -69,6 +69,8 @@ public class DiskController {
             FileEntry entry = selectedRow.fileEntry();
             if (entry.isDirectory() && entry instanceof DirectoryEntry directoryEntry) {
                 navigateToDirectory(directoryEntry);
+            } else {
+                FileViewer.open(entry, primaryStage);
             }
         });
         setDeletedFilesButtonState();
