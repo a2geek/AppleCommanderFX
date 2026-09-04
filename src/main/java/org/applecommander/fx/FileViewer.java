@@ -32,6 +32,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
 import java.lang.reflect.InvocationTargetException;
@@ -74,7 +75,7 @@ public class FileViewer {
         TextArea textArea = new TextArea();
         textArea.setEditable(false);
         textArea.setWrapText(false);
-        textArea.setStyle("-fx-font-family: 'Courier New', Courier, monospace; -fx-font-size: 12px;");
+        textArea.setFont(Font.font("Monospaced", 12));
 
         ToolBar toolbar = buildToolbar(stage, fileEntry, textArea);
         root.setTop(toolbar);
