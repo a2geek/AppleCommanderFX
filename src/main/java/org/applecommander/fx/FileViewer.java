@@ -1,5 +1,6 @@
 package org.applecommander.fx;
 
+import com.jthemedetecor.OsThemeDetector;
 import com.webcodepro.applecommander.storage.FileEntry;
 import com.webcodepro.applecommander.storage.FileFilter;
 import com.webcodepro.applecommander.storage.filters.ApplesoftFileFilter;
@@ -87,6 +88,8 @@ public class FileViewer {
         root.setPadding(new Insets(4));
 
         Scene scene = new Scene(root, 850, 600);
+        applyTheme(scene);
+        OsThemeDetector.getDetector().registerListener(isDark -> javafx.application.Platform.runLater(() -> applyTheme(scene)));
         stage.setScene(scene);
         stage.setOnCloseRequest(event -> closeOwnerWindows(stage));
         stage.setOnHidden(event -> closeOwnerWindows(stage));
@@ -101,15 +104,13 @@ public class FileViewer {
 
     private static ToolBar buildToolbar(Stage stage, FileEntry fileEntry, TextArea textArea) {
         ToolBar toolbar = new ToolBar();
+        toolbar.setPrefHeight(72);
         for (FilterPreset preset : FILTER_PRESETS) {
             Button button = createToolbarButton(preset.label());
             button.setOnAction(event -> textArea.setText(loadText(fileEntry, preset.filterClass())));
             toolbar.getItems().add(button);
         }
 
-        Button closeButton = createToolbarButton("Close");
-        closeButton.setOnAction(event -> stage.close());
-        toolbar.getItems().add(closeButton);
         return toolbar;
     }
 
@@ -118,6 +119,7 @@ public class FileViewer {
         button.setContentDisplay(javafx.scene.control.ContentDisplay.TOP);
         button.setGraphicTextGap(2);
         button.setMinWidth(90);
+        button.setPrefHeight(60);
 
         VBox graphicBox = new VBox(2);
         graphicBox.setAlignment(Pos.CENTER);
@@ -168,6 +170,17 @@ public class FileViewer {
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException ex) {
             return null;
         }
+    }
+
+    private static void applyTheme(Scene scene) {
+        if (scene == null) {
+            return;
+        }
+        scene.getStylesheets().clear();
+        String cssPath = OsThemeDetector.getDetector().isDark()
+                ? "/org/applecommander/fx/theme-dark.css"
+                : "/org/applecommander/fx/theme-light.css";
+        scene.getStylesheets().add(FileViewer.class.getResource(cssPath).toExternalForm());
     }
 
     private static void closeOwnerWindows(Stage stage) {

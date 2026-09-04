@@ -1,6 +1,8 @@
 package org.applecommander.fx;
 
+import com.jthemedetecor.OsThemeDetector;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -33,10 +35,8 @@ public class AppleCommanderFX extends Application {
         controller.setPrimaryStage(stage);
 
         Scene scene = new Scene(root, 1200, 700);
-        scene.getStylesheets().addAll(
-                AppleCommanderFX.class.getResource("theme-light.css").toExternalForm(),
-                AppleCommanderFX.class.getResource("theme-dark.css").toExternalForm()
-        );
+        applyTheme(scene);
+        OsThemeDetector.getDetector().registerListener(isDark -> Platform.runLater(() -> applyTheme(scene)));
 
         stage.setTitle("AppleCommanderFX");
         stage.setScene(scene);
@@ -45,6 +45,14 @@ public class AppleCommanderFX extends Application {
         if (diskFile != null) {
             controller.openDiskFile(diskFile, false);
         }
+    }
+
+    private static void applyTheme(Scene scene) {
+        scene.getStylesheets().clear();
+        String cssPath = OsThemeDetector.getDetector().isDark()
+                ? "/org/applecommander/fx/theme-dark.css"
+                : "/org/applecommander/fx/theme-light.css";
+        scene.getStylesheets().add(AppleCommanderFX.class.getResource(cssPath).toExternalForm());
     }
 
     public static void main(String[] args) {
