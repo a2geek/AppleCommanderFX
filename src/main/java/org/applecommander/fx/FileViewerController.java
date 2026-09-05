@@ -13,7 +13,6 @@ import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCharacterCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 
 import java.io.ByteArrayInputStream;
@@ -154,19 +153,17 @@ public class FileViewerController {
         ToggleButton button = new ToggleButton();
         button.setContentDisplay(javafx.scene.control.ContentDisplay.TOP);
         button.setGraphicTextGap(2);
+        button.setStyle("-fx-padding: 4 8 4 8; -fx-background-radius: 0; -fx-border-radius: 0; -fx-background-insets: 0;");
+        button.setText(label.split("\\s")[0]);
+        button.setTooltip(new Tooltip(String.format("View as %s", label)));
         button.setMinWidth(90);
-        button.setMinHeight(64);
 
-        VBox graphicBox = new VBox(2);
-        graphicBox.setStyle("-fx-alignment:center;");
         Image icon = new Image(FileViewerController.class.getResource("/org/applecommander/images/file.png").toExternalForm());
         ImageView iconView = new ImageView(icon);
-        iconView.setFitWidth(16);
-        iconView.setFitHeight(16);
+        iconView.setFitWidth(24);
+        iconView.setFitHeight(24);
         iconView.setPreserveRatio(true);
-        Label nameLabel = new Label(label);
-        graphicBox.getChildren().addAll(iconView, nameLabel);
-        button.setGraphic(graphicBox);
+        button.setGraphic(iconView);
 
         // store filter in userData for later invocation
         button.setUserData(filter);
@@ -177,11 +174,12 @@ public class FileViewerController {
     private Button createIconButton(String imagePath, String tooltip) {
         Button btn = new Button();
         btn.setContentDisplay(javafx.scene.control.ContentDisplay.TOP);
+        btn.setMinWidth(90);
         try {
             Image icon = new Image(FileViewerController.class.getResource(imagePath).toExternalForm());
             ImageView iv = new ImageView(icon);
-            iv.setFitWidth(16);
-            iv.setFitHeight(16);
+            iv.setFitWidth(24);
+            iv.setFitHeight(24);
             iv.setPreserveRatio(true);
             btn.setGraphic(iv);
         } catch (Exception e) {
@@ -194,10 +192,6 @@ public class FileViewerController {
             btn.setText("Increase");
         }
         btn.setTooltip(new Tooltip(tooltip));
-        // Match toggle button sizing
-        btn.setMinWidth(90);
-        btn.setMinHeight(64);
-        btn.setPrefHeight(64);
         return btn;
     }
 
