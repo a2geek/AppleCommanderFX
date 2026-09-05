@@ -39,7 +39,6 @@ public class FileViewerController {
     private int fontPointSize = 12;
     private final int minFontPointSize = 8;
     private int imageScale = 1; // x1, x2, ...
-    private final int minImageScale = 1;
 
     public void init(FileEntry fileEntry) {
         this.fileEntry = fileEntry;
@@ -57,10 +56,16 @@ public class FileViewerController {
         // Increase: Shortcut + PLUS or EQUALS
         scene.getAccelerators().put(new KeyCharacterCombination("+", KeyCombination.SHORTCUT_DOWN, KeyCombination.SHIFT_ANY), this::onIncrease);
         scene.getAccelerators().put(new KeyCharacterCombination("=", KeyCombination.SHORTCUT_DOWN), this::onIncrease);
+
         // Decrease: Shortcut + MINUS
         scene.getAccelerators().put(new KeyCharacterCombination("-", KeyCombination.SHORTCUT_DOWN, KeyCombination.SHIFT_ANY), this::onDecrease);
+
         // Reset: Shortcut + DIGIT0
         scene.getAccelerators().put(new KeyCharacterCombination("0", KeyCombination.SHORTCUT_DOWN), this::onReset);
+
+        // Copy: Shortcut + C (prefer platform standard). Register both lowercase and uppercase
+        scene.getAccelerators().put(new KeyCharacterCombination("c", KeyCombination.SHORTCUT_DOWN), this::onCopy);
+        scene.getAccelerators().put(new KeyCharacterCombination("C", KeyCombination.SHORTCUT_DOWN), this::onCopy);
     }
 
     private void onReset() {
@@ -251,7 +256,7 @@ public class FileViewerController {
     }
 
     private void adjustImageScale(int delta) {
-        int newScale = Math.max(minImageScale, imageScale + delta);
+        int newScale = Math.max(1, imageScale + delta);
         if (newScale != imageScale) {
             imageScale = newScale;
             imageView.setScaleX(imageScale);
