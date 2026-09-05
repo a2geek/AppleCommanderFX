@@ -2,10 +2,12 @@ package org.applecommander.fx;
 
 import com.webcodepro.applecommander.storage.FileEntry;
 import com.webcodepro.applecommander.storage.FileFilter;
+import com.webcodepro.applecommander.storage.FormattedDisk;
 import com.webcodepro.applecommander.storage.filters.*;
 import com.webcodepro.applecommander.storage.os.dos33.DosFormatDisk;
 import com.webcodepro.applecommander.util.AppleUtil;
 import javafx.fxml.FXML;
+import javafx.print.PageLayout;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
@@ -13,15 +15,21 @@ import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCharacterCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 
 import java.io.ByteArrayInputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+
 import javafx.animation.PauseTransition;
+import javafx.scene.text.TextFlow;
 import javafx.stage.Popup;
 import javafx.util.Duration;
 import javafx.stage.Window;
+import javafx.print.PrinterJob;
 
 public class FileViewerController {
     @FXML
@@ -70,6 +78,9 @@ public class FileViewerController {
         // Copy: Shortcut + C (prefer platform standard). Register both lowercase and uppercase
         scene.getAccelerators().put(new KeyCharacterCombination("c", KeyCombination.SHORTCUT_DOWN), this::onCopy);
         scene.getAccelerators().put(new KeyCharacterCombination("C", KeyCombination.SHORTCUT_DOWN), this::onCopy);
+
+        // Print: Shortcut + P (lowercase p as requested)
+        scene.getAccelerators().put(new KeyCharacterCombination("p", KeyCombination.SHORTCUT_DOWN), this::onPrint);
     }
 
     private void onReset() {
@@ -155,6 +166,13 @@ public class FileViewerController {
         copyBtn.setText("Copy");
         copyBtn.setOnAction(e -> onCopy());
         toolbar.getItems().add(copyBtn);
+
+        // Print button
+        toolbar.getItems().add(new Separator());
+        Button printBtn = createIconButton("/org/applecommander/images/printer.png", "Print");
+        printBtn.setText("Print");
+        printBtn.setOnAction(e -> onPrint());
+        toolbar.getItems().add(printBtn);
 
         // Ensure the first button is visibly selected and content is loaded.
         initialToggleButton.setSelected(true);
@@ -256,6 +274,178 @@ public class FileViewerController {
             // best effort; show text error in UI
             textArea.setText("Copy failed: " + e.getMessage());
             showCopyNotification("Copy failed");
+        }
+    }
+
+    private void onPrint() {
+        try {
+            Scene scene = toolbar.getScene();
+            if (scene == null) {
+                showCopyNotification("No window to print from");
+                return;
+            }
+            Window window = scene.getWindow();
+            PrinterJob job = PrinterJob.createPrinterJob();
+            if (job == null) {
+                showCopyNotification("No printers available");
+                return;
+            }
+            boolean proceed = job.showPrintDialog(window);
+            if (!proceed) return;
+
+            boolean success = false;
+            if (textScrollPane.isVisible()) {
+                String fileName = "---";
+                String diskName = "Disk";
+                if (fileEntry.getFormattedDisk() != null) {
+                    FormattedDisk formattedDisk = fileEntry.getFormattedDisk();
+                    Path filePath = Path.of(formattedDisk.getFilename());
+                    fileName = filePath.getFileName().toString();
+                    diskName = formattedDisk.getDiskName();
+                }
+                String header = String.format("""
+                        Image name: %s
+                        Disk name: %s
+                        File name: %s
+                        """, fileName, diskName, fileEntry.getFilename()).trim();
+                String text = textArea.getText();
+                success = printTextContent(header, fileEntry.getFilename(), text, job, window);
+            } else if (imageScrollPane.isVisible()) {
+                success = job.printPage(imageView);
+            }
+            if (success) {
+                job.endJob();
+                showCopyNotification("Print job sent");
+            } else {
+                showCopyNotification("Print failed");
+            }
+        } catch (Exception e) {
+            showCopyNotification("Print failed: " + e.getMessage());
+        }
+    }
+
+    private boolean printTextContent(String header, String fileName, String text, PrinterJob job, Window window) {
+        if (text == null) text = "";
+        PageLayout pl = job.getJobSettings().getPageLayout();
+        if (pl == null) {
+            pl = job.getPrinter().getDefaultPageLayout();
+        }
+        double printableWidth = pl.getPrintableWidth();
+        double printableHeight = pl.getPrintableHeight();
+
+        // reserve space for header/footer
+        double headerHeight = 40;
+        double footerHeight = 30;
+        double availableHeight = printableHeight - headerHeight - footerHeight;
+
+        javafx.scene.text.Font headerFont = javafx.scene.text.Font.font("System", 10);
+        javafx.scene.text.Font bodyFont = javafx.scene.text.Font.font(textArea.getFont().getFamily(), 10);
+        javafx.scene.text.Font footerFont = javafx.scene.text.Font.font("System", 10);
+
+        String[] paragraphs = text.split("\n\n|");
+
+        java.util.List<javafx.scene.Node> pageNodes = new java.util.ArrayList<>();
+        java.util.List<javafx.scene.text.Text> accumulated = new java.util.ArrayList<>();
+        double used = 0;
+
+        // Helper to measure a Text node height when wrapped
+        java.util.function.BiFunction<String, javafx.scene.text.Font, Double> measureHeight = (str, f) -> {
+            javafx.scene.text.Text t = new javafx.scene.text.Text(str);
+            t.setFont(f);
+            t.setWrappingWidth(printableWidth);
+            new javafx.scene.Scene(new javafx.scene.Group(t)); // ensure CSS applied
+            t.applyCss();
+            return t.getLayoutBounds().getHeight();
+        };
+
+        java.util.List<String> paraList = java.util.Arrays.asList(text.split("\n"));
+
+        java.util.List<javafx.scene.text.Text> currentPageTexts = new java.util.ArrayList<>();
+        double currentUsed = 0;
+        int pageNum = 1;
+
+        for (String para : paraList) {
+            if (para.isEmpty()) {
+                // add a blank line height
+                javafx.scene.text.Text t = new javafx.scene.text.Text("\n");
+                t.setFont(bodyFont);
+                t.setWrappingWidth(printableWidth);
+                t.applyCss();
+                double h = t.getLayoutBounds().getHeight();
+                if (currentUsed + h > availableHeight && !currentPageTexts.isEmpty()) {
+                    // flush
+                    boolean p = printPage(job, header, fileName, currentPageTexts, pageNum, printableWidth, printableHeight, headerFont, footerFont, bodyFont);
+                    if (!p) return false;
+                    pageNum++;
+                    currentPageTexts.clear();
+                    currentUsed = 0;
+                }
+                currentPageTexts.add(t);
+                currentUsed += h;
+                continue;
+            }
+
+            // split paragraph into lines approximated by wrapping via Text nodes
+            javafx.scene.text.Text t = new javafx.scene.text.Text(para + "\n");
+            t.setFont(bodyFont);
+            t.setWrappingWidth(printableWidth);
+            new javafx.scene.Scene(new javafx.scene.Group(t));
+            t.applyCss();
+            double h = t.getLayoutBounds().getHeight();
+
+            if (currentUsed + h > availableHeight && !currentPageTexts.isEmpty()) {
+                boolean p = printPage(job, header, fileName, currentPageTexts, pageNum, printableWidth, printableHeight, headerFont, footerFont, bodyFont);
+                if (!p) return false;
+                pageNum++;
+                currentPageTexts.clear();
+                currentUsed = 0;
+            }
+            currentPageTexts.add(t);
+            currentUsed += h;
+        }
+
+        // flush remaining
+        if (!currentPageTexts.isEmpty()) {
+            boolean p = printPage(job, header, fileName, currentPageTexts, pageNum, printableWidth, printableHeight, headerFont, footerFont, bodyFont);
+            if (!p) return false;
+            pageNum++;
+        }
+
+        return true;
+    }
+
+    private boolean printPage(PrinterJob job, String header, String fileName, java.util.List<javafx.scene.text.Text> texts, int pageNum, double printableWidth, double printableHeight, javafx.scene.text.Font headerFont, javafx.scene.text.Font footerFont, javafx.scene.text.Font bodyFont) {
+        try {
+            VBox page = new VBox(8);
+            page.setPrefWidth(printableWidth);
+            page.setPrefHeight(printableHeight);
+            page.setStyle("-fx-background-color: white; -fx-padding: 10;");
+
+            Label headerLbl = new Label(header);
+            headerLbl.setFont(headerFont);
+            headerLbl.setWrapText(true);
+            headerLbl.setStyle("-fx-font-weight: bold; -fx-padding: 0 0 4 0;");
+
+            Separator sepTop = new Separator();
+            sepTop.setPrefWidth(printableWidth);
+
+            TextFlow tf = new TextFlow();
+            tf.setPrefWidth(printableWidth);
+            tf.getChildren().addAll(texts);
+            VBox.setVgrow(tf, Priority.ALWAYS);
+
+            Separator sepBottom = new Separator();
+            sepBottom.setPrefWidth(printableWidth);
+
+            Label footer = new Label(String.format("Page %d", pageNum));
+            footer.setFont(footerFont);
+            footer.setStyle("-fx-padding: 6 0 0 0;");
+
+            page.getChildren().addAll(headerLbl, sepTop, tf, sepBottom, footer);
+
+            return job.printPage(page);
+        } catch (Exception e) {
+            return false;
         }
     }
 
