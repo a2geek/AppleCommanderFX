@@ -41,6 +41,13 @@ public class FileViewer {
         applyTheme(scene);
         OsThemeDetector.getDetector().registerListener(isDark -> javafx.application.Platform.runLater(() -> applyTheme(scene)));
         stage.setScene(scene);
+
+        // bind keyboard shortcuts to the scene via controller
+        try {
+            controller.bindScene(scene);
+        } catch (Exception ignored) {
+        }
+
         stage.setOnCloseRequest(event -> closeOwnerWindows(stage));
         stage.setOnHidden(event -> closeOwnerWindows(stage));
 

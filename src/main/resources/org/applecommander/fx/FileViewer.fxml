@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?import javafx.scene.control.ScrollPane?>
-<?import javafx.scene.control.TextArea?>
-<?import javafx.scene.control.ToolBar?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.Group?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.StackPane?>
@@ -17,12 +16,19 @@
                         <TextArea fx:id="textArea" />
                     </content>
                 </ScrollPane>
-                <ScrollPane fx:id="imageScrollPane" fitToWidth="true" fitToHeight="true" visible="false" managed="false">
+                <ScrollPane fx:id="imageScrollPane" fitToWidth="false" fitToHeight="false" visible="false" managed="false" pannable="true">
                     <content>
-                        <ImageView fx:id="imageView" preserveRatio="true" />
+                        <Group>
+                            <children>
+                                <ImageView fx:id="imageView" preserveRatio="true" />
+                            </children>
+                        </Group>
                     </content>
                 </ScrollPane>
             </children>
         </StackPane>
     </center>
+    <bottom>
+        <Label fx:id="sizeLabel" text="" style="-fx-padding:6;" />
+    </bottom>
 </BorderPane>

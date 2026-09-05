@@ -6,16 +6,19 @@ import com.webcodepro.applecommander.storage.filters.*;
 import com.webcodepro.applecommander.storage.os.dos33.DosFormatDisk;
 import com.webcodepro.applecommander.util.AppleUtil;
 import javafx.fxml.FXML;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyCharacterCombination;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 
+import java.io.ByteArrayInputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
-import java.io.ByteArrayInputStream;
 
 public class FileViewerController {
     @FXML
@@ -28,15 +31,49 @@ public class FileViewerController {
     private TextArea textArea;
     @FXML
     private ImageView imageView;
+    @FXML
+    private Label sizeLabel;
 
     private final ToggleGroup toggleGroup = new ToggleGroup();
     private FileEntry fileEntry;
+
+    private int fontPointSize = 12;
+    private final int minFontPointSize = 8;
+    private int imageScale = 1; // x1, x2, ...
+    private final int minImageScale = 1;
 
     public void init(FileEntry fileEntry) {
         this.fileEntry = fileEntry;
         configureTextArea();
         configureImageView();
+        // initialize sizes from defaults in UI or current textArea font
+        fontPointSize = (int) Math.max(minFontPointSize, Math.round(textArea.getFont().getSize()));
+        imageScale = 1;
         buildToolbar();
+        updateSizeLabel();
+    }
+
+    public void bindScene(Scene scene) {
+        if (scene == null) return;
+        // Increase: Shortcut + PLUS or EQUALS
+        scene.getAccelerators().put(new KeyCharacterCombination("+", KeyCombination.SHORTCUT_DOWN, KeyCombination.SHIFT_ANY), this::onIncrease);
+        scene.getAccelerators().put(new KeyCharacterCombination("=", KeyCombination.SHORTCUT_DOWN), this::onIncrease);
+        // Decrease: Shortcut + MINUS
+        scene.getAccelerators().put(new KeyCharacterCombination("-", KeyCombination.SHORTCUT_DOWN, KeyCombination.SHIFT_ANY), this::onDecrease);
+        // Reset: Shortcut + DIGIT0
+        scene.getAccelerators().put(new KeyCharacterCombination("0", KeyCombination.SHORTCUT_DOWN), this::onReset);
+    }
+
+    private void onReset() {
+        if (textScrollPane.isVisible()) {
+            fontPointSize = Math.max(minFontPointSize, 12);
+            textArea.setFont(Font.font(textArea.getFont().getFamily(), fontPointSize));
+        } else if (imageScrollPane.isVisible()) {
+            imageScale = 1;
+            imageView.setScaleX(imageScale);
+            imageView.setScaleY(imageScale);
+        }
+        updateSizeLabel();
     }
 
     private void configureTextArea() {
@@ -96,6 +133,14 @@ public class FileViewerController {
             hBox.getChildren().add(tb);
         }
 
+        // Add spacer and size controls
+        toolbar.getItems().add(new Separator());
+        Button decrease = createIconButton("/org/applecommander/images/minus.png", "Decrease size");
+        Button increase = createIconButton("/org/applecommander/images/plus.png", "Increase size");
+        decrease.setOnAction(e -> onDecrease());
+        increase.setOnAction(e -> onIncrease());
+        toolbar.getItems().addAll(decrease, increase);
+
         // Ensure the first button is visibly selected and content is loaded.
         initialToggleButton.setSelected(true);
         toggleGroup.selectToggle(initialToggleButton);
@@ -129,6 +174,80 @@ public class FileViewerController {
         return button;
     }
 
+    private Button createIconButton(String imagePath, String tooltip) {
+        Button btn = new Button();
+        btn.setContentDisplay(javafx.scene.control.ContentDisplay.TOP);
+        try {
+            Image icon = new Image(FileViewerController.class.getResource(imagePath).toExternalForm());
+            ImageView iv = new ImageView(icon);
+            iv.setFitWidth(16);
+            iv.setFitHeight(16);
+            iv.setPreserveRatio(true);
+            btn.setGraphic(iv);
+        } catch (Exception e) {
+            // fall through; label will be set below
+        }
+        // label the buttons for clarity
+        if (tooltip != null && tooltip.toLowerCase().contains("decrease")) {
+            btn.setText("Decrease");
+        } else if (tooltip != null && tooltip.toLowerCase().contains("increase")) {
+            btn.setText("Increase");
+        }
+        btn.setTooltip(new Tooltip(tooltip));
+        // Match toggle button sizing
+        btn.setMinWidth(90);
+        btn.setMinHeight(64);
+        btn.setPrefHeight(64);
+        return btn;
+    }
+
+    private void onDecrease() {
+        if (textScrollPane.isVisible()) {
+            adjustFont(-1);
+        } else if (imageScrollPane.isVisible()) {
+            adjustImageScale(-1);
+        }
+    }
+
+    private void onIncrease() {
+        if (textScrollPane.isVisible()) {
+            adjustFont(+1);
+        } else if (imageScrollPane.isVisible()) {
+            adjustImageScale(+1);
+        }
+    }
+
+    private void adjustFont(int delta) {
+        int newSize = Math.max(minFontPointSize, fontPointSize + delta);
+        if (newSize != fontPointSize) {
+            fontPointSize = newSize;
+            textArea.setFont(Font.font(textArea.getFont().getFamily(), fontPointSize));
+            updateSizeLabel();
+        }
+    }
+
+    private void adjustImageScale(int delta) {
+        int newScale = Math.max(minImageScale, imageScale + delta);
+        if (newScale != imageScale) {
+            imageScale = newScale;
+            imageView.setScaleX(imageScale);
+            imageView.setScaleY(imageScale);
+            updateSizeLabel();
+        }
+    }
+
+    private void updateSizeLabel() {
+        if (sizeLabel == null) return;
+        if (textScrollPane.isVisible()) {
+            String family = textArea.getFont().getFamily();
+            sizeLabel.setText(String.format("Size: %s %dpt", family, fontPointSize));
+        } else if (imageScrollPane.isVisible()) {
+            sizeLabel.setText(String.format("Size: x%d", imageScale));
+        } else {
+            sizeLabel.setText("");
+        }
+    }
+
     private void applyFilter(FileFilter filter) {
         if (filter == null) {
             return;
@@ -151,8 +270,17 @@ public class FileViewerController {
 
             if (isImage) {
                 imageView.setImage(img);
+                // apply current image scale
+                imageView.setScaleX(imageScale);
+                imageView.setScaleY(imageScale);
+
                 imageScrollPane.setVisible(true);
                 imageScrollPane.setManaged(true);
+                // ensure scroll pane doesn't try to fit image to viewport
+                imageScrollPane.setFitToWidth(false);
+                imageScrollPane.setFitToHeight(false);
+                imageScrollPane.setPannable(true);
+
                 textScrollPane.setVisible(false);
                 textScrollPane.setManaged(false);
             } else {
@@ -164,6 +292,8 @@ public class FileViewerController {
                 imageScrollPane.setVisible(false);
                 imageScrollPane.setManaged(false);
             }
+            // update label after switching
+            updateSizeLabel();
         } catch (Exception e) {
             textArea.setText("Error applying filter: " + e.getMessage());
             textScrollPane.setVisible(true);
@@ -184,6 +314,7 @@ public class FileViewerController {
         textScrollPane.setManaged(true);
         imageScrollPane.setVisible(false);
         imageScrollPane.setManaged(false);
+        updateSizeLabel();
     }
 
     private static String getFileFilterLabel(FileFilter fileFilter) {
