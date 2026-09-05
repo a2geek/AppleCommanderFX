@@ -18,6 +18,10 @@ import javafx.scene.text.Font;
 import java.io.ByteArrayInputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
+import javafx.animation.PauseTransition;
+import javafx.stage.Popup;
+import javafx.util.Duration;
+import javafx.stage.Window;
 
 public class FileViewerController {
     @FXML
@@ -227,22 +231,31 @@ public class FileViewerController {
         try {
             javafx.scene.input.Clipboard clipboard = javafx.scene.input.Clipboard.getSystemClipboard();
             javafx.scene.input.ClipboardContent content = new javafx.scene.input.ClipboardContent();
+            boolean didCopy = false;
             if (textScrollPane.isVisible()) {
                 String text = textArea.getText();
                 if (text == null) text = "";
-                content.putString(text);
+                if (!text.isEmpty()) {
+                    content.putString(text);
+                    didCopy = true;
+                }
             } else if (imageScrollPane.isVisible()) {
                 Image img = imageView.getImage();
                 if (img != null) {
                     content.putImage(img);
-                } else {
-                    content.putString("");
+                    didCopy = true;
                 }
             }
-            clipboard.setContent(content);
+            if (didCopy) {
+                clipboard.setContent(content);
+                showCopyNotification("Copied to clipboard");
+            } else {
+                showCopyNotification("Nothing to copy");
+            }
         } catch (Exception e) {
             // best effort; show text error in UI
             textArea.setText("Copy failed: " + e.getMessage());
+            showCopyNotification("Copy failed");
         }
     }
 
@@ -344,6 +357,29 @@ public class FileViewerController {
         imageScrollPane.setVisible(false);
         imageScrollPane.setManaged(false);
         updateSizeLabel();
+    }
+
+    private void showCopyNotification(String message) {
+        try {
+            Scene scene = toolbar.getScene();
+            if (scene == null) return;
+            Window window = scene.getWindow();
+            if (window == null) return;
+
+            Popup popup = new Popup();
+            Label lbl = new Label(message);
+            lbl.setStyle("-fx-background-color: rgba(0,0,0,0.75); -fx-text-fill: white; -fx-padding: 8; -fx-background-radius: 6;");
+            popup.getContent().add(lbl);
+            // show centered above the window bottom
+            double x = window.getX() + (window.getWidth() - lbl.prefWidth(-1)) / 2;
+            double y = window.getY() + window.getHeight() - 80;
+            popup.show(window, x, y);
+
+            PauseTransition pt = new PauseTransition(Duration.seconds(1.5));
+            pt.setOnFinished(ev -> popup.hide());
+            pt.play();
+        } catch (Exception ignored) {
+        }
     }
 
     private static String getFileFilterLabel(FileFilter fileFilter) {
