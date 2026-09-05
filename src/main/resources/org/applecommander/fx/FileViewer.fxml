@@ -2,16 +2,27 @@
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.ToolBar?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.StackPane?>
 <BorderPane xmlns:fx="http://javafx.com/fxml" fx:controller="org.applecommander.fx.FileViewerController">
     <top>
         <ToolBar fx:id="toolbar" prefHeight="72.0" />
     </top>
     <center>
-        <ScrollPane fx:id="scrollPane" fitToWidth="true" fitToHeight="true">
-            <content>
-                <TextArea fx:id="textArea" />
-            </content>
-        </ScrollPane>
+        <StackPane>
+            <children>
+                <ScrollPane fx:id="textScrollPane" fitToWidth="true" fitToHeight="true">
+                    <content>
+                        <TextArea fx:id="textArea" />
+                    </content>
+                </ScrollPane>
+                <ScrollPane fx:id="imageScrollPane" fitToWidth="true" fitToHeight="true" visible="false" managed="false">
+                    <content>
+                        <ImageView fx:id="imageView" preserveRatio="true" />
+                    </content>
+                </ScrollPane>
+            </children>
+        </StackPane>
     </center>
 </BorderPane>

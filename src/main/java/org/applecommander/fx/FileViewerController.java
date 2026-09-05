@@ -15,14 +15,19 @@ import javafx.scene.text.Font;
 
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
+import java.io.ByteArrayInputStream;
 
 public class FileViewerController {
     @FXML
     private ToolBar toolbar;
     @FXML
-    private ScrollPane scrollPane;
+    private ScrollPane textScrollPane;
+    @FXML
+    private ScrollPane imageScrollPane;
     @FXML
     private TextArea textArea;
+    @FXML
+    private ImageView imageView;
 
     private final ToggleGroup toggleGroup = new ToggleGroup();
     private FileEntry fileEntry;
@@ -30,6 +35,7 @@ public class FileViewerController {
     public void init(FileEntry fileEntry) {
         this.fileEntry = fileEntry;
         configureTextArea();
+        configureImageView();
         buildToolbar();
     }
 
@@ -39,11 +45,16 @@ public class FileViewerController {
         textArea.setFont(Font.font("Monospaced", 12));
     }
 
+    private void configureImageView() {
+        imageView.setPreserveRatio(true);
+        imageView.setSmooth(true);
+    }
+
     private void buildToolbar() {
         toolbar.getItems().clear();
 
         final FileFilter suggestedFileFilter = switch (fileEntry.getSuggestedFilter()) {
-            case ShapeTableFileFilter _, GraphicsFileFilter _, BinaryFileFilter _ -> new HexDumpFileFilter();
+            case BinaryFileFilter _ -> new HexDumpFileFilter();
             default -> {
                 FileFilter fileFilter = fileEntry.getSuggestedFilter();
                 if (fileFilter == null) {
@@ -60,7 +71,7 @@ public class FileViewerController {
         // Suggested filter button
         ToggleButton initialToggleButton = createToggleButton(getFileFilterLabel(suggestedFileFilter), suggestedFileFilter);
         initialToggleButton.setToggleGroup(toggleGroup);
-        initialToggleButton.setOnAction(e -> textArea.setText(loadText(fileEntry, suggestedFileFilter)));
+        initialToggleButton.setOnAction(e -> applyFilter(suggestedFileFilter));
         hBox.getChildren().add(initialToggleButton);
 
         // Add hex/disassembly alternate
@@ -68,27 +79,27 @@ public class FileViewerController {
             FileFilter disasm = new DisassemblyFileFilter(fileEntry);
             ToggleButton tb = createToggleButton(getFileFilterLabel(disasm), disasm);
             tb.setToggleGroup(toggleGroup);
-            tb.setOnAction(e -> textArea.setText(loadText(fileEntry, disasm)));
+            tb.setOnAction(e -> applyFilter(disasm));
             hBox.getChildren().add(tb);
         } else {
             FileFilter hex = new HexDumpFileFilter();
             ToggleButton tb = createToggleButton(getFileFilterLabel(hex), hex);
             tb.setToggleGroup(toggleGroup);
-            tb.setOnAction(e -> textArea.setText(loadText(fileEntry, hex)));
+            tb.setOnAction(e -> applyFilter(hex));
             hBox.getChildren().add(tb);
         }
 
         if (fileEntry.getFormattedDisk() instanceof DosFormatDisk dosFormatDisk) {
             ToggleButton tb = createToggleButton("Raw Data", null);
             tb.setToggleGroup(toggleGroup);
-            tb.setOnAction(e -> textArea.setText(AppleUtil.getHexDump(dosFormatDisk.getFileData(fileEntry))));
+            tb.setOnAction(e -> applyRaw(dosFormatDisk));
             hBox.getChildren().add(tb);
         }
 
         // Ensure the first button is visibly selected and content is loaded.
         initialToggleButton.setSelected(true);
         toggleGroup.selectToggle(initialToggleButton);
-        textArea.setText(loadText(fileEntry, suggestedFileFilter));
+        applyFilter(suggestedFileFilter);
 
         // Ensure toolbar buttons have enough height
         toolbar.setStyle("-fx-padding:8; -fx-background-insets: 0; -fx-background-radius: 0;");
@@ -112,15 +123,67 @@ public class FileViewerController {
         graphicBox.getChildren().addAll(iconView, nameLabel);
         button.setGraphic(graphicBox);
 
-        // If filter is provided, wire the action to apply its output when selected
-        if (filter != null) {
-            button.setOnAction(e -> {
-                if (button.isSelected()) {
-                    textArea.setText(loadText(fileEntry, filter));
-                }
-            });
-        }
+        // store filter in userData for later invocation
+        button.setUserData(filter);
+
         return button;
+    }
+
+    private void applyFilter(FileFilter filter) {
+        if (filter == null) {
+            return;
+        }
+        try {
+            byte[] data = filter.filter(fileEntry);
+            if (data == null) data = new byte[0];
+
+            boolean isImage = false;
+            Image img = null;
+            try {
+                // Try to create an Image from the bytes
+                img = new Image(new ByteArrayInputStream(data));
+                if (!img.isError() && img.getWidth() > 0) {
+                    isImage = true;
+                }
+            } catch (Exception ex) {
+                isImage = false;
+            }
+
+            if (isImage) {
+                imageView.setImage(img);
+                imageScrollPane.setVisible(true);
+                imageScrollPane.setManaged(true);
+                textScrollPane.setVisible(false);
+                textScrollPane.setManaged(false);
+            } else {
+                String text = new String(data, StandardCharsets.ISO_8859_1);
+                text = text.replace("\u0000", "");
+                textArea.setText(text);
+                textScrollPane.setVisible(true);
+                textScrollPane.setManaged(true);
+                imageScrollPane.setVisible(false);
+                imageScrollPane.setManaged(false);
+            }
+        } catch (Exception e) {
+            textArea.setText("Error applying filter: " + e.getMessage());
+            textScrollPane.setVisible(true);
+            textScrollPane.setManaged(true);
+            imageScrollPane.setVisible(false);
+            imageScrollPane.setManaged(false);
+        }
+    }
+
+    private void applyRaw(DosFormatDisk dosFormatDisk) {
+        try {
+            byte[] data = dosFormatDisk.getFileData(fileEntry);
+            textArea.setText(AppleUtil.getHexDump(data));
+        } catch (Exception e) {
+            textArea.setText("Error loading raw data: " + e.getMessage());
+        }
+        textScrollPane.setVisible(true);
+        textScrollPane.setManaged(true);
+        imageScrollPane.setVisible(false);
+        imageScrollPane.setManaged(false);
     }
 
     private static String getFileFilterLabel(FileFilter fileFilter) {
