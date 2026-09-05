@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.ToolBar?>
+<?import javafx.scene.layout.BorderPane?>
+<BorderPane xmlns:fx="http://javafx.com/fxml" fx:controller="org.applecommander.fx.FileViewerController">
+    <top>
+        <ToolBar fx:id="toolbar" prefHeight="72.0" />
+    </top>
+    <center>
+        <ScrollPane fx:id="scrollPane" fitToWidth="true" fitToHeight="true">
+            <content>
+                <TextArea fx:id="textArea" />
+            </content>
+        </ScrollPane>
+    </center>
+</BorderPane>
