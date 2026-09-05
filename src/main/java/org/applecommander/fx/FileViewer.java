@@ -3,31 +3,13 @@ package org.applecommander.fx;
 import com.jthemedetecor.OsThemeDetector;
 import com.webcodepro.applecommander.storage.FileEntry;
 import com.webcodepro.applecommander.storage.FileFilter;
-import com.webcodepro.applecommander.storage.filters.ApplesoftFileFilter;
-import com.webcodepro.applecommander.storage.filters.AppleWorksDataBaseFileFilter;
-import com.webcodepro.applecommander.storage.filters.AppleWorksSpreadSheetFileFilter;
-import com.webcodepro.applecommander.storage.filters.AppleWorksWordProcessorFileFilter;
-import com.webcodepro.applecommander.storage.filters.AssemblySourceFileFilter;
-import com.webcodepro.applecommander.storage.filters.BinaryFileFilter;
-import com.webcodepro.applecommander.storage.filters.BusinessBASICFileFilter;
-import com.webcodepro.applecommander.storage.filters.DisassemblyFileFilter;
-import com.webcodepro.applecommander.storage.filters.GutenbergFileFilter;
-import com.webcodepro.applecommander.storage.filters.GraphicsFileFilter;
-import com.webcodepro.applecommander.storage.filters.HexDumpFileFilter;
-import com.webcodepro.applecommander.storage.filters.IntegerBasicFileFilter;
-import com.webcodepro.applecommander.storage.filters.MBASICFileFilter;
-import com.webcodepro.applecommander.storage.filters.PascalCodeFileFilter;
-import com.webcodepro.applecommander.storage.filters.PascalTextFileFilter;
-import com.webcodepro.applecommander.storage.filters.ShapeTableFileFilter;
-import com.webcodepro.applecommander.storage.filters.TextFileFilter;
+import com.webcodepro.applecommander.storage.filters.*;
+import com.webcodepro.applecommander.storage.os.dos33.DosFormatDisk;
+import com.webcodepro.applecommander.util.AppleUtil;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.ToolBar;
+import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
@@ -39,28 +21,11 @@ import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 public class FileViewer {
     private static final Map<Stage, Set<Stage>> OWNER_WINDOWS = new HashMap<>();
-    private static final List<FilterPreset> FILTER_PRESETS = List.of(
-            new FilterPreset("Applesoft", ApplesoftFileFilter.class),
-            new FilterPreset("ADB", AppleWorksDataBaseFileFilter.class),
-            new FilterPreset("ASP", AppleWorksSpreadSheetFileFilter.class),
-            new FilterPreset("AWP", AppleWorksWordProcessorFileFilter.class),
-            new FilterPreset("Assembly", AssemblySourceFileFilter.class),
-            new FilterPreset("BASIC", BusinessBASICFileFilter.class),
-            new FilterPreset("Disassembly", DisassemblyFileFilter.class),
-            new FilterPreset("Gutenberg", GutenbergFileFilter.class),
-            new FilterPreset("Hex Dump", HexDumpFileFilter.class),
-            new FilterPreset("Integer", IntegerBasicFileFilter.class),
-            new FilterPreset("MBASIC", MBASICFileFilter.class),
-            new FilterPreset("CODE", PascalCodeFileFilter.class),
-            new FilterPreset("TEXT", PascalTextFileFilter.class),
-            new FilterPreset("Text", TextFileFilter.class)
-    );
 
     public static void open(FileEntry fileEntry, Stage owner) {
         if (fileEntry == null) {
@@ -79,8 +44,6 @@ public class FileViewer {
 
         ToolBar toolbar = buildToolbar(stage, fileEntry, textArea);
         root.setTop(toolbar);
-
-        textArea.setText(loadText(fileEntry, determineDefaultFilter(fileEntry)));
 
         ScrollPane scrollPane = new ScrollPane(textArea);
         scrollPane.setFitToWidth(true);
@@ -105,14 +68,64 @@ public class FileViewer {
 
     private static ToolBar buildToolbar(Stage stage, FileEntry fileEntry, TextArea textArea) {
         ToolBar toolbar = new ToolBar();
-        toolbar.setPrefHeight(72);
-        for (FilterPreset preset : FILTER_PRESETS) {
-            Button button = createToolbarButton(preset.label());
-            button.setOnAction(event -> textArea.setText(loadText(fileEntry, preset.filterClass())));
+
+        final FileFilter suggestedFileFilter = switch (fileEntry.getSuggestedFilter()) {
+            case ShapeTableFileFilter _, GraphicsFileFilter _, BinaryFileFilter _ -> new HexDumpFileFilter();
+            default -> {
+                FileFilter fileFilter = fileEntry.getSuggestedFilter();
+                if (fileFilter == null) {
+                    yield new HexDumpFileFilter();
+                }
+                yield fileFilter;
+            }
+        };
+
+        Button button = createToolbarButton(getFileFilterLabel(suggestedFileFilter));
+        button.setOnAction(event -> textArea.setText(loadText(fileEntry, suggestedFileFilter)));
+        toolbar.getItems().add(button);
+        button.fire();  // Preloads text pane
+
+        if (suggestedFileFilter instanceof HexDumpFileFilter) {
+            FileFilter fileFilter = new DisassemblyFileFilter(fileEntry);
+            button = createToolbarButton(getFileFilterLabel(fileFilter));
+            button.setOnAction(event -> textArea.setText(loadText(fileEntry, fileFilter)));
+            toolbar.getItems().add(button);
+        }
+        else {
+            FileFilter fileFilter = new HexDumpFileFilter();
+            button = createToolbarButton(getFileFilterLabel(fileFilter));
+            button.setOnAction(event -> textArea.setText(loadText(fileEntry, fileFilter)));
+            toolbar.getItems().add(button);
+        }
+        if (fileEntry.getFormattedDisk() instanceof DosFormatDisk dosFormatDisk) {
+            button = createToolbarButton("Raw Data");
+            button.setOnAction(event -> textArea.setText(AppleUtil.getHexDump(dosFormatDisk.getFileData(fileEntry))));
             toolbar.getItems().add(button);
         }
 
         return toolbar;
+    }
+
+    private static String getFileFilterLabel(FileFilter fileFilter) {
+        return switch (fileFilter) {
+            case ApplesoftFileFilter _ -> "Applesoft BASIC";
+            case AppleWorksDataBaseFileFilter _ -> "ADB";
+            case AppleWorksSpreadSheetFileFilter _ -> "ASP";
+            case AppleWorksWordProcessorFileFilter _ -> "AWP";
+            case AssemblySourceFileFilter _ -> "Assembly";
+            case BinaryFileFilter _ -> "Binary";
+            case DisassemblyFileFilter _ -> "Disassembly";
+            case GraphicsFileFilter _ -> "Graphics";
+            case GutenbergFileFilter _ -> "Gutenberg";
+            case HexDumpFileFilter _ -> "Hex";
+            case IntegerBasicFileFilter _ -> "Integer BASIC";
+            case MBASICFileFilter _ -> "MBASIC";
+            case PascalCodeFileFilter _ -> "CODE";
+            case PascalTextFileFilter _ -> "TEXT";
+            case ShapeTableFileFilter _ -> "Shape Table";
+            case TextFileFilter _ -> "Text";
+            default -> "Unknown - FIXME";
+        };
     }
 
     private static Button createToolbarButton(String label) {
@@ -120,7 +133,6 @@ public class FileViewer {
         button.setContentDisplay(javafx.scene.control.ContentDisplay.TOP);
         button.setGraphicTextGap(2);
         button.setMinWidth(90);
-        button.setPrefHeight(60);
 
         VBox graphicBox = new VBox(2);
         graphicBox.setAlignment(Pos.CENTER);
@@ -135,28 +147,7 @@ public class FileViewer {
         return button;
     }
 
-    private static Class<? extends FileFilter> determineDefaultFilter(FileEntry fileEntry) {
-        FileFilter suggested = fileEntry.getSuggestedFilter();
-        if (suggested == null) {
-            return HexDumpFileFilter.class;
-        }
-        if (suggested instanceof GraphicsFileFilter || suggested instanceof ShapeTableFileFilter || suggested instanceof BinaryFileFilter) {
-            return HexDumpFileFilter.class;
-        }
-        for (FilterPreset preset : FILTER_PRESETS) {
-            if (preset.filterClass().isInstance(suggested)) {
-                return preset.filterClass();
-            }
-        }
-        return HexDumpFileFilter.class;
-    }
-
-    private static String loadText(FileEntry fileEntry, Class<? extends FileFilter> filterClass) {
-        FileFilter filter = instantiateFilter(filterClass, fileEntry);
-        if (filter == null) {
-            filter = new HexDumpFileFilter();
-        }
-
+    private static String loadText(FileEntry fileEntry, FileFilter filter) {
         byte[] data = filter.filter(fileEntry);
         String text = new String(data, StandardCharsets.ISO_8859_1);
         return text.replace("\u0000", "");
@@ -201,8 +192,5 @@ public class FileViewer {
             child.close();
         }
         OWNER_WINDOWS.remove(owner);
-    }
-
-    private record FilterPreset(String label, Class<? extends FileFilter> filterClass) {
     }
 }
