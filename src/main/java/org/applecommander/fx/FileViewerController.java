@@ -140,6 +140,13 @@ public class FileViewerController {
         increase.setOnAction(e -> onIncrease());
         toolbar.getItems().addAll(decrease, increase);
 
+        // Copy button separated by a divider
+        toolbar.getItems().add(new Separator());
+        Button copyBtn = createIconButton("/org/applecommander/images/copy.png", "Copy");
+        copyBtn.setText("Copy");
+        copyBtn.setOnAction(e -> onCopy());
+        toolbar.getItems().add(copyBtn);
+
         // Ensure the first button is visibly selected and content is loaded.
         initialToggleButton.setSelected(true);
         toggleGroup.selectToggle(initialToggleButton);
@@ -208,6 +215,29 @@ public class FileViewerController {
             adjustFont(+1);
         } else if (imageScrollPane.isVisible()) {
             adjustImageScale(+1);
+        }
+    }
+
+    private void onCopy() {
+        try {
+            javafx.scene.input.Clipboard clipboard = javafx.scene.input.Clipboard.getSystemClipboard();
+            javafx.scene.input.ClipboardContent content = new javafx.scene.input.ClipboardContent();
+            if (textScrollPane.isVisible()) {
+                String text = textArea.getText();
+                if (text == null) text = "";
+                content.putString(text);
+            } else if (imageScrollPane.isVisible()) {
+                Image img = imageView.getImage();
+                if (img != null) {
+                    content.putImage(img);
+                } else {
+                    content.putString("");
+                }
+            }
+            clipboard.setContent(content);
+        } catch (Exception e) {
+            // best effort; show text error in UI
+            textArea.setText("Copy failed: " + e.getMessage());
         }
     }
 
