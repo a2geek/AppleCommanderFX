@@ -28,10 +28,10 @@ public class AppleCommanderFX extends Application {
     }
 
     private static void createWindow(Stage stage, File diskFile) throws Exception {
-        FXMLLoader loader = new FXMLLoader(AppleCommanderFX.class.getResource("app.fxml"));
+        FXMLLoader loader = new FXMLLoader(AppleCommanderFX.class.getResource("DiskViewer.fxml"));
         Parent root = loader.load();
 
-        DiskController controller = loader.getController();
+        DiskViewerController controller = loader.getController();
         controller.setPrimaryStage(stage);
 
         Scene scene = new Scene(root, 1200, 700);

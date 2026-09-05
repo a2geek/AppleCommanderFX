@@ -17,7 +17,7 @@ import java.io.File;
 import java.util.List;
 import java.util.prefs.Preferences;
 
-public class DiskController {
+public class DiskViewerController {
     private static final String PREF_NODE = "/org/applecommander/fx";
     private static final String IMAGE_DIRECTORY_KEY = "image_directory";
 
