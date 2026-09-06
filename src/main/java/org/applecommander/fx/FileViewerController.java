@@ -6,8 +6,10 @@ import com.webcodepro.applecommander.storage.FormattedDisk;
 import com.webcodepro.applecommander.storage.filters.*;
 import com.webcodepro.applecommander.storage.os.dos33.DosFormatDisk;
 import com.webcodepro.applecommander.util.AppleUtil;
+import javafx.animation.PauseTransition;
 import javafx.fxml.FXML;
 import javafx.print.PageLayout;
+import javafx.print.PrinterJob;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
@@ -18,20 +20,19 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
+import javafx.scene.text.TextFlow;
+import javafx.stage.Popup;
+import javafx.stage.Window;
+import javafx.util.Duration;
 
 import java.io.ByteArrayInputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
-
-import javafx.animation.PauseTransition;
-import javafx.scene.text.TextFlow;
-import javafx.stage.Popup;
-import javafx.util.Duration;
-import javafx.stage.Window;
-import javafx.print.PrinterJob;
+import java.util.Locale;
 
 public class FileViewerController {
+    private Scene scene;
     @FXML
     private ToolBar toolbar;
     @FXML
@@ -52,7 +53,8 @@ public class FileViewerController {
     private final int minFontPointSize = 8;
     private int imageScale = 1; // x1, x2, ...
 
-    public void init(FileEntry fileEntry) {
+    public void init(Scene scene, FileEntry fileEntry) {
+        this.scene = scene;
         this.fileEntry = fileEntry;
         configureTextArea();
         configureImageView();
@@ -61,26 +63,6 @@ public class FileViewerController {
         imageScale = 1;
         buildToolbar();
         updateSizeLabel();
-    }
-
-    public void bindScene(Scene scene) {
-        if (scene == null) return;
-        // Increase: Shortcut + PLUS or EQUALS
-        scene.getAccelerators().put(new KeyCharacterCombination("+", KeyCombination.SHORTCUT_DOWN, KeyCombination.SHIFT_ANY), this::onIncrease);
-        scene.getAccelerators().put(new KeyCharacterCombination("=", KeyCombination.SHORTCUT_DOWN), this::onIncrease);
-
-        // Decrease: Shortcut + MINUS
-        scene.getAccelerators().put(new KeyCharacterCombination("-", KeyCombination.SHORTCUT_DOWN, KeyCombination.SHIFT_ANY), this::onDecrease);
-
-        // Reset: Shortcut + DIGIT0
-        scene.getAccelerators().put(new KeyCharacterCombination("0", KeyCombination.SHORTCUT_DOWN), this::onReset);
-
-        // Copy: Shortcut + C (prefer platform standard). Register both lowercase and uppercase
-        scene.getAccelerators().put(new KeyCharacterCombination("c", KeyCombination.SHORTCUT_DOWN), this::onCopy);
-        scene.getAccelerators().put(new KeyCharacterCombination("C", KeyCombination.SHORTCUT_DOWN), this::onCopy);
-
-        // Print: Shortcut + P (lowercase p as requested)
-        scene.getAccelerators().put(new KeyCharacterCombination("p", KeyCombination.SHORTCUT_DOWN), this::onPrint);
     }
 
     private void onReset() {
@@ -154,22 +136,26 @@ public class FileViewerController {
 
         // Add spacer and size controls
         toolbar.getItems().add(new Separator());
-        Button decrease = createIconButton("/org/applecommander/images/minus.png", "Decrease size");
-        Button increase = createIconButton("/org/applecommander/images/plus.png", "Increase size");
+        Button decrease = createIconButton("/org/applecommander/images/minus.png", "Decrease size",
+                new KeyCharacterCombination("-", KeyCombination.SHORTCUT_DOWN, KeyCombination.SHIFT_ANY), this::onDecrease);
+        Button increase = createIconButton("/org/applecommander/images/plus.png", "Increase size",
+                new KeyCharacterCombination("+", KeyCombination.SHORTCUT_DOWN, KeyCombination.SHIFT_ANY), this::onIncrease);
         decrease.setOnAction(e -> onDecrease());
         increase.setOnAction(e -> onIncrease());
         toolbar.getItems().addAll(decrease, increase);
 
         // Copy button separated by a divider
         toolbar.getItems().add(new Separator());
-        Button copyBtn = createIconButton("/org/applecommander/images/copy.png", "Copy");
+        Button copyBtn = createIconButton("/org/applecommander/images/copy.png", "Copy",
+                new KeyCharacterCombination("c", KeyCombination.SHORTCUT_DOWN), this::onCopy);
         copyBtn.setText("Copy");
         copyBtn.setOnAction(e -> onCopy());
         toolbar.getItems().add(copyBtn);
 
         // Print button
         toolbar.getItems().add(new Separator());
-        Button printBtn = createIconButton("/org/applecommander/images/printer.png", "Print");
+        Button printBtn = createIconButton("/org/applecommander/images/printer.png", "Print",
+                new KeyCharacterCombination("p", KeyCombination.SHORTCUT_DOWN), this::onPrint);
         printBtn.setText("Print");
         printBtn.setOnAction(e -> onPrint());
         toolbar.getItems().add(printBtn);
@@ -205,7 +191,7 @@ public class FileViewerController {
         return button;
     }
 
-    private Button createIconButton(String imagePath, String tooltip) {
+    private Button createIconButton(String imagePath, String tooltip, KeyCombination keyCombination, Runnable runnable) {
         Button btn = new Button();
         btn.setContentDisplay(javafx.scene.control.ContentDisplay.TOP);
         btn.setMinWidth(90);
@@ -219,13 +205,11 @@ public class FileViewerController {
         } catch (Exception e) {
             // fall through; label will be set below
         }
-        // label the buttons for clarity
-        if (tooltip != null && tooltip.toLowerCase().contains("decrease")) {
-            btn.setText("Decrease");
-        } else if (tooltip != null && tooltip.toLowerCase().contains("increase")) {
-            btn.setText("Increase");
-        }
-        btn.setTooltip(new Tooltip(tooltip));
+
+        // label the buttons for clarity and append shortcut hints (note we just uppercase the text)
+        scene.getAccelerators().put(keyCombination, runnable);
+        String fullTooltip = String.format("%s (%s)", tooltip, keyCombination.getDisplayText().toUpperCase(Locale.ROOT));
+        btn.setTooltip(new Tooltip(fullTooltip));
         return btn;
     }
 

@@ -6,15 +6,36 @@ import com.webcodepro.applecommander.storage.os.prodos.ProdosFormatDisk;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.collections.transformation.SortedList;
 import javafx.fxml.FXML;
+import javafx.geometry.Bounds;
+import javafx.geometry.VPos;
+import javafx.scene.Scene;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyCharacterCombination;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.text.Text;
+import javafx.scene.text.TextAlignment;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import org.applecommander.source.FileSource;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.prefs.Preferences;
 
 public class DiskViewerController {
@@ -24,6 +45,7 @@ public class DiskViewerController {
     private static final int CONTENT_FILES = 0;
     private static final int CONTENT_DISK_USAGE = 1;
 
+    @FXML private Button openDiskButton;
     @FXML private TableView<DiskFileRow> fileTable;
     @FXML private Label statusLabel;
     @FXML private ToggleButton filesContentButton;
@@ -32,24 +54,21 @@ public class DiskViewerController {
     @FXML private ToggleButton nativeToolButton;
     @FXML private ToggleButton detailToolButton;
     @FXML private ToggleButton deletedFilesToggleButton;
-    @FXML private javafx.scene.image.ImageView deletedFilesIcon;
+    @FXML private ImageView deletedFilesIcon;
     @FXML private Button switchDiskButton;
-    @FXML private RadioMenuItem standardViewMenuItem;
-    @FXML private RadioMenuItem nativeViewMenuItem;
-    @FXML private RadioMenuItem detailViewMenuItem;
-    @FXML private javafx.scene.layout.HBox breadcrumbBar;
+    @FXML private HBox breadcrumbBar;
 
     // Disk usage UI
-    @FXML private javafx.scene.layout.VBox diskUsagePane;
-    @FXML private javafx.scene.canvas.Canvas diskUsageCanvas;
-    @FXML private javafx.scene.layout.HBox legendBox;
+    @FXML private VBox diskUsagePane;
+    @FXML private Canvas diskUsageCanvas;
+    @FXML private HBox legendBox;
 
     private Stage primaryStage;
-    private List<FormattedDisk> availableDisks = new java.util.ArrayList<>();
+    private List<FormattedDisk> availableDisks = new ArrayList<>();
     private int currentDiskIndex = -1;
     private FormattedDisk currentDisk;
     private DirectoryEntry currentDirectory;
-    private List<DirectoryEntry> directoryPath = new java.util.ArrayList<>();
+    private List<DirectoryEntry> directoryPath = new ArrayList<>();
     private int currentContentMode = CONTENT_FILES;
     private int currentDisplayMode = FormattedDisk.FILE_DISPLAY_STANDARD;
     private boolean showDeletedFiles = false;
@@ -91,6 +110,36 @@ public class DiskViewerController {
         this.primaryStage = stage;
     }
 
+    public void bindScene(Scene scene) {
+        if (scene == null) return;
+        // Open: Shortcut + o (lowercase)
+        applyShortcutToButton(scene, openDiskButton, "Open Disk",
+                new KeyCharacterCombination("o", KeyCombination.SHORTCUT_DOWN), this::openDisk);
+
+        // Function keys for view modes
+        applyShortcutToButton(scene, standardToolButton, "Standard View",
+                new KeyCodeCombination(KeyCode.F2), this::selectStandardView);
+        applyShortcutToButton(scene, nativeToolButton, "Native View",
+                new KeyCodeCombination(KeyCode.F3), this::selectNativeView);
+        applyShortcutToButton(scene, detailToolButton, "Detail View",
+                new KeyCodeCombination(KeyCode.F4), this::selectDetailView);
+
+        // Shortcut+1 etc for information panes
+        applyShortcutToButton(scene, filesContentButton, "View File Listing",
+                new KeyCharacterCombination("1", KeyCombination.SHORTCUT_DOWN), this::selectFilesContent);
+        applyShortcutToButton(scene, diskUsageContentButton, "Disk Usage",
+                new KeyCharacterCombination("2", KeyCombination.SHORTCUT_DOWN), this::selectDiskUsageContent);
+
+        // Shortcut+Esc to switch disks
+        applyShortcutToButton(scene, switchDiskButton, "Switch Disks",
+                new KeyCharacterCombination("x", KeyCombination.SHORTCUT_DOWN), this::switchDisk);
+    }
+    private void applyShortcutToButton(Scene scene, ButtonBase button, String tooltipText, KeyCombination keyCombination, Runnable runnable) {
+        scene.getAccelerators().put(keyCombination, runnable);
+        button.setOnAction(e -> runnable.run());
+        button.setTooltip(new Tooltip(String.format("%s (%s)", tooltipText, keyCombination.getDisplayText().toUpperCase(Locale.ROOT))));
+    }
+
     @FXML
     private void openDisk() {
         FileChooser fileChooser = new FileChooser();
@@ -99,11 +148,8 @@ public class DiskViewerController {
         if (lastDirectory != null && lastDirectory.isDirectory()) {
             fileChooser.setInitialDirectory(lastDirectory);
         }
-        fileChooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("All files", "*.*")
-        );
-        for (com.webcodepro.applecommander.storage.FilenameFilter filter : com.webcodepro.applecommander.storage.FilenameFilter.getFilenameFilters()) {
-            fileChooser.getExtensionFilters().add(0, new FileChooser.ExtensionFilter(filter.getNames(), filter.getExtensionList()));
+        for (FilenameFilter filter : FilenameFilter.getFilenameFilters()) {
+            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(filter.getNames(), filter.getExtensionList()));
         }
 
         File selectedFile = fileChooser.showOpenDialog(primaryStage);
@@ -147,14 +193,21 @@ public class DiskViewerController {
             currentDiskIndex = availableDisks.isEmpty() ? -1 : 0;
             if (availableDisks.isEmpty()) {
                 closeDisk();
+                Alert alert = new Alert(Alert.AlertType.WARNING);
+                alert.setTitle("Unable to open disk");
+                alert.setHeaderText("Disk image not recognized.");
+                alert.setContentText("The disk format was not recognized. No error occurred.");
+                Stage stage = (Stage) alert.getDialogPane().getScene().getWindow();
+                stage.setAlwaysOnTop(true);
+                alert.showAndWait();
                 return;
             }
             displayDisk(availableDisks.get(currentDiskIndex));
             if (primaryStage != null) {
                 primaryStage.setTitle("AppleCommanderFX - " + selectedFile.getName());
             }
-        } catch (Exception ex) {
-            showErrorDialog("Could not open disk image", ex);
+        } catch (Throwable t) {
+            showErrorDialog("Could not open disk image", t);
         }
     }
 
@@ -261,15 +314,6 @@ public class DiskViewerController {
             detailToolButton.setVisible(filesSelected);
             detailToolButton.setManaged(filesSelected);
         }
-        if (standardViewMenuItem != null) {
-            standardViewMenuItem.setVisible(filesSelected);
-        }
-        if (nativeViewMenuItem != null) {
-            nativeViewMenuItem.setVisible(filesSelected);
-        }
-        if (detailViewMenuItem != null) {
-            detailViewMenuItem.setVisible(filesSelected);
-        }
         if (deletedFilesToggleButton != null) {
             deletedFilesToggleButton.setVisible(filesSelected);
             deletedFilesToggleButton.setManaged(filesSelected);
@@ -308,15 +352,6 @@ public class DiskViewerController {
         if (detailToolButton != null) {
             detailToolButton.setSelected(displayMode == FormattedDisk.FILE_DISPLAY_DETAIL);
         }
-        if (standardViewMenuItem != null) {
-            standardViewMenuItem.setSelected(displayMode == FormattedDisk.FILE_DISPLAY_STANDARD);
-        }
-        if (nativeViewMenuItem != null) {
-            nativeViewMenuItem.setSelected(displayMode == FormattedDisk.FILE_DISPLAY_NATIVE);
-        }
-        if (detailViewMenuItem != null) {
-            detailViewMenuItem.setSelected(displayMode == FormattedDisk.FILE_DISPLAY_DETAIL);
-        }
 
         if (currentDisk != null) {
             refreshDiskView();
@@ -344,15 +379,6 @@ public class DiskViewerController {
         }
         if (detailToolButton != null) {
             detailToolButton.setDisable(!enabled);
-        }
-        if (standardViewMenuItem != null) {
-            standardViewMenuItem.setDisable(!enabled);
-        }
-        if (nativeViewMenuItem != null) {
-            nativeViewMenuItem.setDisable(!enabled);
-        }
-        if (detailViewMenuItem != null) {
-            detailViewMenuItem.setDisable(!enabled);
         }
     }
 
@@ -502,7 +528,7 @@ public class DiskViewerController {
         }
 
         // Draw onto canvas
-        javafx.scene.canvas.GraphicsContext gc = diskUsageCanvas.getGraphicsContext2D();
+        GraphicsContext gc = diskUsageCanvas.getGraphicsContext2D();
         double w = diskUsageCanvas.getWidth();
         double h = diskUsageCanvas.getHeight();
         if (w <= 0) w = 800;
@@ -512,17 +538,17 @@ public class DiskViewerController {
         double gap = 2.0;
 
         // Determine label font sizes and measure required label areas
-        javafx.scene.text.Font titleFont = javafx.scene.text.Font.font(12);
-        javafx.scene.text.Font labelFont = javafx.scene.text.Font.font(10);
+        Font titleFont = Font.font(12);
+        Font labelFont = Font.font(10);
 
         // Measure top labels (column numbers) and left labels (row numbers)
         double maxTopLabelWidth = 0.0;
         double maxTopLabelHeight = 0.0;
         for (int col = 0; col < xCount; col++) {
             String label = Integer.toString(col);
-            javafx.scene.text.Text t = new javafx.scene.text.Text(label);
+            Text t = new Text(label);
             t.setFont(labelFont);
-            javafx.geometry.Bounds b = t.getLayoutBounds();
+            Bounds b = t.getLayoutBounds();
             maxTopLabelWidth = Math.max(maxTopLabelWidth, b.getWidth());
             maxTopLabelHeight = Math.max(maxTopLabelHeight, b.getHeight());
         }
@@ -531,9 +557,9 @@ public class DiskViewerController {
         double maxLeftLabelHeight = 0.0;
         for (int row = 0; row < yCount; row++) {
             String label = Integer.toString(row);
-            javafx.scene.text.Text t = new javafx.scene.text.Text(label);
+            Text t = new Text(label);
             t.setFont(labelFont);
-            javafx.geometry.Bounds b = t.getLayoutBounds();
+            Bounds b = t.getLayoutBounds();
             maxLeftLabelWidth = Math.max(maxLeftLabelWidth, b.getWidth());
             maxLeftLabelHeight = Math.max(maxLeftLabelHeight, b.getHeight());
         }
@@ -556,10 +582,10 @@ public class DiskViewerController {
         gc.clearRect(0, 0, w, h);
 
         // Colors
-        javafx.scene.paint.Color freeColor = javafx.scene.paint.Color.web("#90EE90"); // lightgreen
-        javafx.scene.paint.Color usedColor = javafx.scene.paint.Color.web("#F08080"); // lightcoral
-        javafx.scene.paint.Color borderColor = javafx.scene.paint.Color.web("#000000");
-        javafx.scene.paint.Color textColor = OsThemeDetector.getDetector().isDark() ? javafx.scene.paint.Color.web("#E0E0E0") : javafx.scene.paint.Color.web("#000000");
+        Color freeColor = Color.web("#90EE90"); // lightgreen
+        Color usedColor = Color.web("#F08080"); // lightcoral
+        Color borderColor = Color.web("#000000");
+        Color textColor = OsThemeDetector.getDetector().isDark() ? Color.web("#E0E0E0") : Color.web("#000000");
 
         // Draw axis titles and numeric labels
         gc.setFill(textColor);
@@ -570,14 +596,14 @@ public class DiskViewerController {
         String topTitle = xLabel;
         double titleX = padding + leftLabelWidth + availableW / 2.0;
         double titleY = padding + topTitleHeight / 2.0;
-        gc.setTextAlign(javafx.scene.text.TextAlignment.CENTER);
-        gc.setTextBaseline(javafx.geometry.VPos.CENTER);
+        gc.setTextAlign(TextAlignment.CENTER);
+        gc.setTextBaseline(VPos.CENTER);
         gc.fillText(topTitle, titleX, titleY);
 
         // Draw top numeric labels (in their own band below the title)
         gc.setFont(labelFont);
-        gc.setTextAlign(javafx.scene.text.TextAlignment.CENTER);
-        gc.setTextBaseline(javafx.geometry.VPos.CENTER);
+        gc.setTextAlign(TextAlignment.CENTER);
+        gc.setTextBaseline(VPos.CENTER);
         double topNumbersY = padding + topTitleHeight + topNumberHeight / 2.0;
         for (int col = 0; col < xCount; col++) {
             // show 0, then every 5th index (0,5,10,...) and always show last index
@@ -635,7 +661,7 @@ public class DiskViewerController {
                 } else if (isUsed) {
                     gc.setFill(usedColor);
                 } else {
-                    gc.setFill(javafx.scene.paint.Color.LIGHTGRAY);
+                    gc.setFill(Color.LIGHTGRAY);
                 }
                 gc.fillRect(x, y, Math.max(1, cellW), Math.max(1, cellH));
                 gc.setStroke(borderColor);
@@ -647,14 +673,14 @@ public class DiskViewerController {
         if (legendBox != null) {
             legendBox.getChildren().clear();
 
-            javafx.scene.layout.HBox freeLegend = new javafx.scene.layout.HBox(6);
-            javafx.scene.layout.Region freeSwatch = new javafx.scene.layout.Region();
+            HBox freeLegend = new HBox(6);
+            Region freeSwatch = new Region();
             freeSwatch.setStyle("-fx-background-color: #90EE90; -fx-border-color: #000000; -fx-min-width: 16px; -fx-min-height: 16px;");
             Label freeLabel = new Label("Free");
             freeLegend.getChildren().addAll(freeSwatch, freeLabel);
 
-            javafx.scene.layout.HBox usedLegend = new javafx.scene.layout.HBox(6);
-            javafx.scene.layout.Region usedSwatch = new javafx.scene.layout.Region();
+            HBox usedLegend = new HBox(6);
+            Region usedSwatch = new Region();
             usedSwatch.setStyle("-fx-background-color: #F08080; -fx-border-color: #000000; -fx-min-width: 16px; -fx-min-height: 16px;");
             Label usedLabel = new Label("Used");
             usedLegend.getChildren().addAll(usedSwatch, usedLabel);
@@ -688,7 +714,7 @@ public class DiskViewerController {
                 .map(fileEntry -> new DiskFileRow(fileEntry, fileEntry.getFileColumnData(displayMode)))
                 .toList();
 
-        javafx.collections.ObservableList<DiskFileRow> rowList = FXCollections.observableArrayList(rows);
+        ObservableList<DiskFileRow> rowList = FXCollections.observableArrayList(rows);
         SortedList<DiskFileRow> sortedRows = new SortedList<>(rowList);
         sortedRows.comparatorProperty().bind(fileTable.comparatorProperty());
         fileTable.setItems(sortedRows);
@@ -742,7 +768,7 @@ public class DiskViewerController {
             String imagePath = showDeletedFiles
                     ? "/org/applecommander/images/deleted-files-visible.png"
                     : "/org/applecommander/images/deleted-files-hidden.png";
-            deletedFilesIcon.setImage(new javafx.scene.image.Image(getClass().getResource(imagePath).toExternalForm()));
+            deletedFilesIcon.setImage(new Image(getClass().getResource(imagePath).toExternalForm()));
         }
     }
 
@@ -788,11 +814,11 @@ public class DiskViewerController {
         return "Current disk: " + diskName + " (" + format + ")";
     }
 
-    private void showErrorDialog(String message, Exception ex) {
+    private void showErrorDialog(String message, Throwable t) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle("Disk Browser Error");
         alert.setHeaderText(message);
-        alert.setContentText(ex.getMessage() == null ? "An unexpected error occurred." : ex.getMessage());
+        alert.setContentText(t.getMessage() == null ? "An unexpected error occurred." : t.getMessage());
         alert.showAndWait();
     }
 

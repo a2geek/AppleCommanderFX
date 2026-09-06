@@ -15,7 +15,7 @@
     <top>
         <ToolBar>
             <items>
-                <Button onAction="#openDisk" style="-fx-padding: 4 8 4 8; -fx-background-radius: 0;">
+                <Button fx:id="openDiskButton" onAction="#openDisk" style="-fx-padding: 4 8 4 8; -fx-background-radius: 0;">
                     <graphic>
                         <VBox alignment="CENTER" spacing="2">
                             <ImageView fitWidth="24" fitHeight="24" preserveRatio="true">

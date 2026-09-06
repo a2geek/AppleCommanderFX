@@ -40,6 +40,13 @@ public class AppleCommanderFX extends Application {
 
         stage.setTitle("AppleCommanderFX");
         stage.setScene(scene);
+
+        // Bind keyboard shortcuts in controller
+        try {
+            controller.bindScene(scene);
+        } catch (Exception ignored) {
+        }
+
         stage.show();
 
         if (diskFile != null) {
